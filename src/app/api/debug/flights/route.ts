@@ -25,10 +25,8 @@ export async function GET(request: NextRequest) {
 
     console.log('=== DEBUG: Raw FlightAware response structure:', {
       flightsCount: response.flights?.length || 0,
-      numPages: response.num_pages,
-      hasLinks: !!response.links,
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
+      numPages: response.num_pages || 1,
+      fromCache: !!cachedData,
       maxPagesRequested: 100
     });
 
