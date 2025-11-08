@@ -37,6 +37,8 @@ export interface FlightInfo {
   };
   scheduled_out?: string;
   actual_out?: string;
+  scheduled_off?: string;
+  actual_off?: string;
   estimated_in?: string;
   actual_in?: string;
   aircraft_type?: string;

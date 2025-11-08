@@ -63,8 +63,8 @@ export default function TripsPage() {
 
     if (sortBy === 'date') {
       return flightsCopy.sort((a, b) => {
-        const dateA = new Date(a.actual_out || a.scheduled_out || '');
-        const dateB = new Date(b.actual_out || b.scheduled_out || '');
+        const dateA = new Date((a as any).actual_off || (a as any).scheduled_off || a.actual_out || a.scheduled_out || '');
+        const dateB = new Date((b as any).actual_off || (b as any).scheduled_off || b.actual_out || b.scheduled_out || '');
         return dateB.getTime() - dateA.getTime(); // Most recent first
       });
     } else {
@@ -309,16 +309,16 @@ export default function TripsPage() {
                     </div>
 
                     {/* Flight Date - Prominent Display */}
-                    {(flight.actual_out || flight.scheduled_out) && (
+                    {((flight as any).actual_off || (flight as any).scheduled_off || flight.actual_out || flight.scheduled_out) && (
                       <div className="text-sm font-medium text-robair-green mt-1">
-                        {formatDate(flight.actual_out || flight.scheduled_out!)}
+                        {formatDate((flight as any).actual_off || (flight as any).scheduled_off || flight.actual_out || flight.scheduled_out!)}
                       </div>
                     )}
 
                     {/* Flight Time */}
-                    {(flight.actual_out || flight.scheduled_out) && (
+                    {((flight as any).actual_off || (flight as any).scheduled_off || flight.actual_out || flight.scheduled_out) && (
                       <div className="text-xs text-robair-black/70">
-                        Departed: {formatTimeOnly(flight.actual_out || flight.scheduled_out!)}
+                        Departed: {formatTimeOnly((flight as any).actual_off || (flight as any).scheduled_off || flight.actual_out || flight.scheduled_out!)}
                       </div>
                     )}
 

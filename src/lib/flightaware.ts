@@ -63,12 +63,13 @@ export class FlightAwareClient {
   /**
    * Get flight information by ident (tail number or flight identifier)
    */
-  async getFlightByIdent(ident: string, start?: Date, end?: Date): Promise<FlightResponse> {
+  async getFlightByIdent(ident: string, start?: Date, end?: Date, maxPages: number = 100): Promise<FlightResponse> {
     let endpoint = `/flights/${encodeURIComponent(ident)}`;
 
     const params = new URLSearchParams();
     if (start) params.append('start', start.toISOString());
     if (end) params.append('end', end.toISOString());
+    params.append('max_pages', maxPages.toString());
 
     if (params.toString()) {
       endpoint += `?${params.toString()}`;

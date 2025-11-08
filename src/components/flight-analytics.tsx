@@ -55,11 +55,12 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
   console.log('Current year:', currentYear);
 
   const thisYearFlights = currentFlights.filter(flight => {
-    const flightDateStr = flight.actual_out || flight.scheduled_out || '';
+    // FlightAware uses actual_off/scheduled_off for departure times, not actual_out/scheduled_out
+    const flightDateStr = (flight as any).actual_off || (flight as any).scheduled_off || flight.actual_out || flight.scheduled_out || '';
     const flightDate = new Date(flightDateStr);
     const flightYear = flightDate.getFullYear();
     console.log(`Flight ${flight.fa_flight_id}: date=${flightDateStr}, year=${flightYear}, currentYear=${currentYear}, match=${flightYear === currentYear}`);
-    return flightYear === currentYear;
+    return flightYear === currentYear && !isNaN(flightYear);
   });
 
   console.log('Flights this year:', thisYearFlights.length);
