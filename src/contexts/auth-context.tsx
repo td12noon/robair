@@ -14,7 +14,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const CORRECT_PASSWORD = process.env.NEXT_PUBLIC_SITE_PASSWORD || "robair2024";
+  const CORRECT_PASSWORD = process.env.NEXT_PUBLIC_SITE_PASSWORD || "trevor";
 
   useEffect(() => {
     // Check if user is already authenticated (stored in localStorage)
