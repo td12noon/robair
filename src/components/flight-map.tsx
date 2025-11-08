@@ -114,7 +114,7 @@ export function FlightMap({ ident, height = "400px" }: FlightMapProps) {
         )}
 
         {/* Airport markers for recent flights */}
-        {currentFlights.slice(0, 5).forEach(flight => {
+        {currentFlights.slice(0, 5).flatMap(flight => {
           const origin = getAirportCoordinates(flight.origin?.code);
           const destination = getAirportCoordinates(flight.destination?.code);
 
@@ -136,7 +136,7 @@ export function FlightMap({ ident, height = "400px" }: FlightMapProps) {
               </Marker>
             )
           );
-        })}
+        }).filter(Boolean)}
 
         {/* Flight paths */}
         {flightPaths.map((pathData, index) =>
