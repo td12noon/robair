@@ -102,9 +102,9 @@ export class FlightAwareClient {
   /**
    * Get current flights for an aircraft by ident
    */
-  async getCurrentFlights(ident: string): Promise<Flight[]> {
+  async getCurrentFlights(ident: string, maxPages: number = 100): Promise<Flight[]> {
     try {
-      const response = await this.getFlightByIdent(ident);
+      const response = await this.getFlightByIdent(ident, undefined, undefined, maxPages);
       return response.flights || [];
     } catch (error) {
       console.error('Error getting current flights:', error);

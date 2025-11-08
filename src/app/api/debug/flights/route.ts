@@ -8,13 +8,18 @@ export async function GET(request: NextRequest) {
 
     console.log('=== DEBUG: Fetching flights for:', ident);
 
-    // Get raw FlightAware response
-    const response = await flightAware.getFlightByIdent(ident);
+    // Get raw FlightAware response with date range and max_pages
+    const endDate = new Date();
+    const startDate = new Date('2024-01-01'); // Start from beginning of 2024
+    const response = await flightAware.getFlightByIdent(ident, startDate, endDate, 100);
 
     console.log('=== DEBUG: Raw FlightAware response structure:', {
       flightsCount: response.flights?.length || 0,
       numPages: response.num_pages,
-      hasLinks: !!response.links
+      hasLinks: !!response.links,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      maxPagesRequested: 100
     });
 
     // Log first flight details if available

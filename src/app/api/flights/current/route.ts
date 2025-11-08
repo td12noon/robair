@@ -13,7 +13,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const flights = await flightAware.getCurrentFlights(ident);
+    // Get flights with extended date range to capture more flight history
+    const endDate = new Date();
+    const startDate = new Date('2024-01-01'); // Start from beginning of 2024
+
+    // Use getFlightByIdent directly with date range and max_pages
+    const response = await flightAware.getFlightByIdent(ident, startDate, endDate, 100);
+    const flights = response.flights || [];
 
     return NextResponse.json({
       ident,
