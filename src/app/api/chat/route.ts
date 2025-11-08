@@ -25,12 +25,6 @@ export async function POST(request: NextRequest) {
 
     // Check if OpenAI API key is configured
     const openaiApiKey = process.env.OPENAI_API_KEY;
-    if (!openaiApiKey) {
-      return NextResponse.json({
-        response: "I'd love to help, but I need an OpenAI API key to be configured first. Please ask your administrator to add the OPENAI_API_KEY environment variable.",
-        error: 'OpenAI API key not configured'
-      });
-    }
 
     // Get flight data for context
     const aircraftIdent = process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || 'N424BB';
@@ -74,6 +68,25 @@ Current aircraft data for ${aircraftIdent}:
       flightContext = `Aircraft: ${aircraftIdent} (flight data temporarily unavailable)`;
     }
 
+    // If no OpenAI API key, provide basic responses
+    if (!openaiApiKey) {
+      const lowerMessage = message.toLowerCase();
+      let response = `Hi! I'm your Rob Air assistant. I have access to your flight data for ${aircraftIdent}, but I need an OpenAI API key to provide advanced AI responses.\n\n`;
+
+      if (lowerMessage.includes('flight') || lowerMessage.includes('angel')) {
+        response += `Based on your current data:\n${flightContext}\n\nTo enable advanced AI responses, please configure the OPENAI_API_KEY environment variable.`;
+      } else if (lowerMessage.includes('help')) {
+        response += `I can help you with information about your aircraft and flights. Try asking about:\n- Total flights this year\n- Angel Flight statistics\n- Recent flight history\n- Flight distances and destinations\n\nFor advanced AI responses, please configure the OPENAI_API_KEY environment variable.`;
+      } else {
+        response += `I can provide basic flight information. ${flightContext}\n\nFor advanced AI chat capabilities, please configure the OPENAI_API_KEY environment variable.`;
+      }
+
+      return NextResponse.json({
+        response,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // System prompt for the AI assistant
     const systemPrompt = `You are Rob Air Assistant, a helpful AI assistant for a pilot. You have access to real-time flight data and can answer questions about:
 
@@ -112,11 +125,34 @@ Keep responses concise but informative. Use nautical miles (nm) for distances an
     });
 
     if (!openaiResponse.ok) {
-      const error = await openaiResponse.json();
-      console.error('OpenAI API error:', error);
+      let errorDetails = 'Unknown error';
+      try {
+        const error = await openaiResponse.json();
+        errorDetails = error.error?.message || JSON.stringify(error);
+      } catch (e) {
+        errorDetails = `HTTP ${openaiResponse.status}: ${openaiResponse.statusText}`;
+      }
+
+      console.error('OpenAI API error:', {
+        status: openaiResponse.status,
+        statusText: openaiResponse.statusText,
+        details: errorDetails
+      });
+
+      // More specific error messages based on status
+      let userMessage = "I'm having trouble connecting to my AI service right now.";
+      if (openaiResponse.status === 401) {
+        userMessage = "There's an issue with the AI service authentication. Please check the API key configuration.";
+      } else if (openaiResponse.status === 429) {
+        userMessage = "The AI service is currently busy. Please try again in a moment.";
+      } else if (openaiResponse.status >= 500) {
+        userMessage = "The AI service is temporarily unavailable. Please try again later.";
+      }
+
       return NextResponse.json({
-        response: "I'm having trouble connecting to my AI service right now. Please try again in a moment.",
-        error: 'OpenAI API error'
+        response: userMessage,
+        error: 'OpenAI API error',
+        details: errorDetails
       });
     }
 
