@@ -35,17 +35,34 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
 
   const currentFlights = flights.data?.flights || [];
 
-  // Debug: log the first flight to see what data we're getting
-  if (currentFlights.length > 0 && process.env.NODE_ENV === 'development') {
-    console.log('First flight data:', currentFlights[0]);
+  // Debug: log flight data
+  console.log('=== ANALYTICS DEBUG ===');
+  console.log('Total flights received:', currentFlights.length);
+  if (currentFlights.length > 0) {
+    console.log('First flight sample:', {
+      ident: currentFlights[0].ident,
+      fa_flight_id: currentFlights[0].fa_flight_id,
+      operator: currentFlights[0].operator,
+      route_distance: currentFlights[0].route_distance,
+      scheduled_out: currentFlights[0].scheduled_out,
+      actual_out: currentFlights[0].actual_out,
+      status: currentFlights[0].status
+    });
   }
 
   // Calculate this year's flights (calendar year)
   const currentYear = new Date().getFullYear();
+  console.log('Current year:', currentYear);
+
   const thisYearFlights = currentFlights.filter(flight => {
-    const flightDate = new Date(flight.actual_out || flight.scheduled_out || '');
-    return flightDate.getFullYear() === currentYear;
+    const flightDateStr = flight.actual_out || flight.scheduled_out || '';
+    const flightDate = new Date(flightDateStr);
+    const flightYear = flightDate.getFullYear();
+    console.log(`Flight ${flight.fa_flight_id}: date=${flightDateStr}, year=${flightYear}, currentYear=${currentYear}, match=${flightYear === currentYear}`);
+    return flightYear === currentYear;
   });
+
+  console.log('Flights this year:', thisYearFlights.length);
 
   // Calculate total miles and Angel Flight miles
   let totalMiles = 0;
