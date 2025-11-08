@@ -24,8 +24,9 @@ const getFlightDistance = (flight: any): number => {
 const isAngelFlight = (operator?: string): boolean => {
   if (!operator) return false;
 
-  // Check if the operator is "Air Charity Network"
-  return operator.toLowerCase().includes('air charity network') ||
+  // Check if the operator is "NGF" (New Generation Flight) or other Angel Flight identifiers
+  return operator === 'NGF' ||
+         operator.toLowerCase().includes('air charity network') ||
          operator.toLowerCase().includes('angel flight') ||
          operator === 'Air Charity Network';
 };
@@ -74,11 +75,16 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
     const distance = getFlightDistance(flight);
     totalMiles += distance;
 
-    if (isAngelFlight(flight.operator)) {
+    const angelFlight = isAngelFlight(flight.operator);
+    console.log(`Flight ${flight.fa_flight_id}: operator=${flight.operator}, distance=${distance}, isAngel=${angelFlight}`);
+
+    if (angelFlight) {
       angelFlightMiles += distance;
       angelFlightCount += 1;
     }
   });
+
+  console.log(`Total Angel Flight miles: ${angelFlightMiles}, Angel Flight count: ${angelFlightCount}`);
 
   const stats = [
     {

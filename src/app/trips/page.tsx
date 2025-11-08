@@ -42,7 +42,8 @@ function formatDuration(minutes: number) {
 // Check if flight is Angel Flight based on operator
 function isAngelFlight(operator?: string): boolean {
   if (!operator) return false;
-  return operator.toLowerCase().includes('air charity network') ||
+  return operator === 'NGF' ||
+         operator.toLowerCase().includes('air charity network') ||
          operator.toLowerCase().includes('angel flight') ||
          operator === 'Air Charity Network';
 }

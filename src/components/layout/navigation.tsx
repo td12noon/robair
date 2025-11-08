@@ -14,16 +14,16 @@ const navigationItems = [
     href: "/",
     icon: Home,
   },
-  {
-    name: "Trips",
-    href: "/trips",
-    icon: Plane,
-  },
-  {
-    name: "Maintenance",
-    href: "/maintenance",
-    icon: Wrench,
-  },
+  // {
+  //   name: "Trips",
+  //   href: "/trips",
+  //   icon: Plane,
+  // },
+  // {
+  //   name: "Maintenance",
+  //   href: "/maintenance",
+  //   icon: Wrench,
+  // },
   {
     name: "AI Chatbot",
     href: "/chat",
