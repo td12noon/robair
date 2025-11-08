@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate current year flights
     const currentYear = new Date().getFullYear();
-    const thisYearFlights = response.flights?.filter(flight => {
+    const thisYearFlights = response.flights?.filter((flight: any) => {
       const flightDate = new Date(flight.actual_off || flight.scheduled_off || '');
       const flightYear = flightDate.getFullYear();
       console.log(`Flight ${flight.fa_flight_id}: ${flight.actual_off || flight.scheduled_off} -> Year: ${flightYear}, Current: ${currentYear}, Match: ${flightYear === currentYear}`);
