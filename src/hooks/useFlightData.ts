@@ -25,6 +25,8 @@ export interface FlightInfo {
   ident: string;
   fa_flight_id: string;
   status: string;
+  operator?: string;
+  route_distance?: number;
   origin?: {
     code?: string;
     name?: string;

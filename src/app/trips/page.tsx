@@ -3,7 +3,7 @@
 import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plane, MapPin, Clock, Navigation, Fuel, Gauge, RefreshCw, ExternalLink } from "lucide-react";
+import { Plane, MapPin, Clock, Navigation, Fuel, Gauge, RefreshCw, ExternalLink, Heart } from "lucide-react";
 import { AircraftMap } from "@/components/aircraft-map";
 import { useFlightData } from "@/hooks/useFlightData";
 
@@ -37,6 +37,14 @@ function formatDuration(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}h ${mins}m`;
+}
+
+// Check if flight is Angel Flight based on operator
+function isAngelFlight(operator?: string): boolean {
+  if (!operator) return false;
+  return operator.toLowerCase().includes('air charity network') ||
+         operator.toLowerCase().includes('angel flight') ||
+         operator === 'Air Charity Network';
 }
 
 export default function TripsPage() {
@@ -267,9 +275,15 @@ export default function TripsPage() {
                     <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
                       activeFlights.some(f => f.fa_flight_id === flight.fa_flight_id)
                         ? 'bg-green-500'
+                        : isAngelFlight(flight.operator)
+                        ? 'bg-red-500'
                         : 'bg-gray-400'
                     }`}>
-                      <Plane className="h-5 w-5 text-white" />
+                      {isAngelFlight(flight.operator) ? (
+                        <Heart className="h-5 w-5 text-white" />
+                      ) : (
+                        <Plane className="h-5 w-5 text-white" />
+                      )}
                     </div>
                     <div>
                       <h4 className="font-semibold text-robair-black">
@@ -312,6 +326,8 @@ export default function TripsPage() {
                     <div className="text-xs text-robair-black/50 mt-1">
                       {flight.aircraft_type && flight.aircraft_type}
                       {flight.registration && ` • ${flight.registration}`}
+                      {flight.operator && ` • ${flight.operator}`}
+                      {flight.route_distance && ` • ${flight.route_distance} nm`}
                     </div>
                   </div>
                 </div>

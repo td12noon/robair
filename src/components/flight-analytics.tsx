@@ -9,55 +9,25 @@ interface FlightAnalyticsProps {
   ident: string;
 }
 
-// Airport distances (approximate great circle distances in nautical miles)
-const getFlightDistance = (originCode?: string, destinationCode?: string): number => {
-  if (!originCode || !destinationCode) return 0;
+// Get flight distance from FlightAware data or fallback to 0
+const getFlightDistance = (flight: any): number => {
+  // Use FlightAware route_distance if available (in nautical miles)
+  if (flight.route_distance && flight.route_distance > 0) {
+    return flight.route_distance;
+  }
 
-  // Common routes and their approximate distances in nautical miles
-  const routeDistances: Record<string, number> = {
-    // New England regional routes
-    'KPSM-KBED': 45,
-    'KBED-KPSM': 45,
-    'KPSM-KBGR': 150,
-    'KBGR-KPSM': 150,
-    'KBED-KFRG': 180,
-    'KFRG-KBED': 180,
-    'KPSM-KGHG': 35,
-    'KGHG-KPSM': 35,
-    'KBED-KBTV': 180,
-    'KBTV-KBED': 180,
-
-    // Angel Flight routes (typically longer distances)
-    'KPSM-KFAY': 520,
-    'KFAY-KPSM': 520,
-    'KBED-KFAY': 540,
-    'KFAY-KBED': 540,
-    'KPSM-KTDF': 480,
-    'KTDF-KPSM': 480,
-    'KBED-KTDF': 500,
-    'KTDF-KBED': 500,
-  };
-
-  const routeKey = `${originCode}-${destinationCode}`;
-  return routeDistances[routeKey] || 200; // Default fallback distance
+  // Return 0 if no distance data available
+  return 0;
 };
 
-// Determine if a flight is likely an Angel Flight based on destination
-const isAngelFlight = (originCode?: string, destinationCode?: string): boolean => {
-  if (!originCode || !destinationCode) return false;
+// Determine if a flight is an Angel Flight based on operator
+const isAngelFlight = (operator?: string): boolean => {
+  if (!operator) return false;
 
-  // Angel Flights are typically longer routes to medical facilities
-  // Common Angel Flight destinations from New England
-  const angelFlightAirports = ['KFAY', 'KTDF']; // Fayetteville, Person County
-  const newEnglandAirports = ['KPSM', 'KBED', 'KBGR', 'KGHG', 'KBTV'];
-
-  // Check if it's a route between New England and known Angel Flight destinations
-  const isFromNE = newEnglandAirports.includes(originCode);
-  const isToAngel = angelFlightAirports.includes(destinationCode);
-  const isFromAngel = angelFlightAirports.includes(originCode);
-  const isToNE = newEnglandAirports.includes(destinationCode);
-
-  return (isFromNE && isToAngel) || (isFromAngel && isToNE);
+  // Check if the operator is "Air Charity Network"
+  return operator.toLowerCase().includes('air charity network') ||
+         operator.toLowerCase().includes('angel flight') ||
+         operator === 'Air Charity Network';
 };
 
 export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
@@ -78,10 +48,10 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
   let angelFlightCount = 0;
 
   thisYearFlights.forEach(flight => {
-    const distance = getFlightDistance(flight.origin?.code, flight.destination?.code);
+    const distance = getFlightDistance(flight);
     totalMiles += distance;
 
-    if (isAngelFlight(flight.origin?.code, flight.destination?.code)) {
+    if (isAngelFlight(flight.operator)) {
       angelFlightMiles += distance;
       angelFlightCount += 1;
     }
