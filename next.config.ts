@@ -7,11 +7,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
-  experimental: {
-    turbo: {
-      root: undefined,
-    },
-  },
 };
 
 export default nextConfig;
