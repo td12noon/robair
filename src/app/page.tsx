@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plane, MapPin, Wrench, Bot, Clock, TrendingUp } from "lucide-react";
-import { AircraftMap } from "@/components/aircraft-map";
+import { FlightMap } from "@/components/flight-map";
+import { FlightAnalytics } from "@/components/flight-analytics";
 import Link from "next/link";
 
 export default function Home() {
@@ -33,10 +34,12 @@ export default function Home() {
           </div>
 
           {/* Right Side - Aircraft Location Map */}
-          <AircraftMap
-            ident={process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N12345"}
-            className="relative"
-          />
+          <div className="relative">
+            <FlightMap
+              ident={process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N424BB"}
+              height="500px"
+            />
+          </div>
         </div>
       </div>
 
@@ -103,33 +106,14 @@ export default function Home() {
         </Card>
       </div>
 
-      {/* Quick Stats */}
-      <Card className="bg-gradient-to-r from-robair-green/5 to-robair-green/10">
-        <CardHeader>
-          <CardTitle className="text-2xl flex items-center">
-            <TrendingUp className="mr-2 h-6 w-6" />
-            Quick Stats
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center space-y-2">
-              <div className="text-3xl font-bold text-robair-green">--</div>
-              <div className="text-sm text-robair-black/70">Total Flight Hours</div>
-            </div>
-            <div className="text-center space-y-2">
-              <div className="text-3xl font-bold text-robair-green">--</div>
-              <div className="text-sm text-robair-black/70">Maintenance Records</div>
-            </div>
-            <div className="text-center space-y-2">
-              <div className="text-3xl font-bold text-robair-green">
-                <Clock className="h-8 w-8 mx-auto" />
-              </div>
-              <div className="text-sm text-robair-black/70">Always Ready</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Flight Analytics */}
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-robair-black">Flight Analytics</h2>
+          <p className="text-robair-black/70 mt-2">Your {new Date().getFullYear()} aviation summary</p>
+        </div>
+        <FlightAnalytics ident={process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N424BB"} />
+      </div>
 
       {/* Welcome Message */}
       <Card className="text-center">
