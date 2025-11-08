@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { flightAware } from '@/lib/flightaware';
+import { getCachedFlightData } from '@/lib/supabase';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -31,10 +32,19 @@ export async function POST(request: NextRequest) {
     let flightContext = '';
 
     try {
-      const endDate = new Date();
-      const startDate = new Date('2024-01-01');
-      const response = await flightAware.getFlightByIdent(aircraftIdent, startDate, endDate, 10);
-      const flights = response.flights || [];
+      // Try cached data first (45 minute expiration for chat context)
+      let cachedData = await getCachedFlightData(aircraftIdent, 45);
+      let flights: any[] = [];
+
+      if (cachedData) {
+        flights = cachedData.flights || [];
+      } else {
+        // Fallback to API if no cache (but this will be rare since the main API caches)
+        const endDate = new Date();
+        const startDate = new Date('2024-01-01');
+        const response = await flightAware.getFlightByIdent(aircraftIdent, startDate, endDate, 10);
+        flights = response.flights || [];
+      }
 
       // Calculate basic stats for context
       const currentYear = new Date().getFullYear();

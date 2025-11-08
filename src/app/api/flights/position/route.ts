@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { flightAware, FlightAwareError } from '@/lib/flightaware';
+import { getCachedFlightData } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +14,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const position = await flightAware.getCurrentPosition(ident);
+    // For position data, we need very fresh data (5 minute cache max)
+    let cachedData = await getCachedFlightData(ident, 5);
+    let position = null;
+
+    if (cachedData && cachedData.flights && cachedData.flights.length > 0) {
+      // Get the most recent flight from cached data
+      const recentFlight = cachedData.flights[0];
+      if (recentFlight.status === 'En Route' || recentFlight.status === 'Active') {
+        // Extract position from flight data if available
+        position = {
+          latitude: recentFlight.track?.latitude,
+          longitude: recentFlight.track?.longitude,
+          altitude: recentFlight.track?.altitude,
+          heading: recentFlight.track?.heading,
+          groundspeed: recentFlight.track?.groundspeed,
+          timestamp: recentFlight.track?.timestamp,
+          altitude_change: recentFlight.track?.altitude_change,
+        };
+      }
+    }
+
+    // If no cached position data, try FlightAware API
+    if (!position) {
+      try {
+        position = await flightAware.getCurrentPosition(ident);
+      } catch (error) {
+        console.warn('FlightAware position API failed, using cached data fallback');
+      }
+    }
 
     if (!position) {
       return NextResponse.json({
