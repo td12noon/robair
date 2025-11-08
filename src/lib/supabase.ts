@@ -4,7 +4,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Only create client if both URL and key are properly configured
+export const supabase = (supabaseUrl.startsWith('http') && supabaseAnonKey.length > 10)
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // Database types for flight data caching
 export interface FlightDataCache {
@@ -18,7 +21,7 @@ export interface FlightDataCache {
 // Cache flight data with expiration
 export async function getCachedFlightData(ident: string, maxAgeMinutes: number = 30): Promise<any | null> {
   try {
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabase) {
       console.warn('Supabase not configured, skipping cache');
       return null;
     }
@@ -49,7 +52,7 @@ export async function getCachedFlightData(ident: string, maxAgeMinutes: number =
 // Store flight data in cache
 export async function setCachedFlightData(ident: string, flightData: any): Promise<boolean> {
   try {
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabase) {
       console.warn('Supabase not configured, skipping cache storage');
       return false;
     }
@@ -79,7 +82,7 @@ export async function setCachedFlightData(ident: string, flightData: any): Promi
 // Clear old cache entries (cleanup function)
 export async function clearOldCache(maxAgeHours: number = 24): Promise<void> {
   try {
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabase) {
       return;
     }
 

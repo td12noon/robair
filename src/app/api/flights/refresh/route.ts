@@ -17,10 +17,7 @@ export async function POST(request: NextRequest) {
     console.log('Force refreshing flight data for:', ident);
 
     // Get fresh data from FlightAware
-    const endDate = new Date();
-    const startDate = new Date('2024-01-01');
-    const response = await flightAware.getFlightByIdent(ident, startDate, endDate, 100);
-    const flights = response.flights || [];
+    const flights = await flightAware.getCurrentFlights(ident, 100);
 
     // Cache the fresh data
     const cacheData = {

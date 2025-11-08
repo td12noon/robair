@@ -40,10 +40,7 @@ export async function POST(request: NextRequest) {
         flights = cachedData.flights || [];
       } else {
         // Fallback to API if no cache (but this will be rare since the main API caches)
-        const endDate = new Date();
-        const startDate = new Date('2024-01-01');
-        const response = await flightAware.getFlightByIdent(aircraftIdent, startDate, endDate, 10);
-        flights = response.flights || [];
+        flights = await flightAware.getCurrentFlights(aircraftIdent, 10);
       }
 
       // Calculate basic stats for context

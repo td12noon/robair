@@ -18,10 +18,9 @@ export async function GET(request: NextRequest) {
       response = { flights: cachedData.flights, num_pages: 1 };
     } else {
       console.log('=== DEBUG: Cache miss, fetching from FlightAware API...');
-      // Get raw FlightAware response with date range and max_pages
-      const endDate = new Date();
-      const startDate = new Date('2024-01-01'); // Start from beginning of 2024
-      response = await flightAware.getFlightByIdent(ident, startDate, endDate, 100);
+      // Get raw FlightAware response
+      const flights = await flightAware.getCurrentFlights(ident, 100);
+      response = { flights, num_pages: 1 };
     }
 
     console.log('=== DEBUG: Raw FlightAware response structure:', {

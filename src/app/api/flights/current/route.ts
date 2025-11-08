@@ -28,12 +28,9 @@ export async function GET(request: NextRequest) {
     } else {
       console.log('Cache miss, fetching from FlightAware API...');
       try {
-        // Get flights with extended date range to capture more flight history
-        const endDate = new Date();
-        const startDate = new Date('2024-01-01'); // Start from beginning of 2024
-
-        // Use getFlightByIdent directly with date range and max_pages
-        const response = await flightAware.getFlightByIdent(ident, startDate, endDate, 100);
+        // Use getCurrentFlights method which doesn't have date restrictions
+        const flightsArray = await flightAware.getCurrentFlights(ident, 100);
+        const response = { flights: flightsArray };
         flights = response.flights || [];
 
         // Cache the result
