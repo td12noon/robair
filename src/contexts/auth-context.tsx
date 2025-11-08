@@ -17,18 +17,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const CORRECT_PASSWORD = process.env.NEXT_PUBLIC_SITE_PASSWORD || "trevor";
 
   useEffect(() => {
-    // Check if user is already authenticated (stored in localStorage)
-    const authStatus = localStorage.getItem('robair-authenticated');
-    if (authStatus === 'true') {
-      setIsAuthenticated(true);
-    }
-    setIsLoading(false);
+    // Minimal timeout to handle Safari hydration
+    const timer = setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        try {
+          const authStatus = localStorage.getItem('robair-authenticated');
+          if (authStatus === 'true') {
+            setIsAuthenticated(true);
+          }
+        } catch (error) {
+          // Handle localStorage errors (private browsing, storage quota, etc.)
+          console.warn('localStorage access failed:', error);
+        }
+      }
+      setIsLoading(false);
+    }, 100); // Short delay for Safari
+
+    return () => clearTimeout(timer);
   }, []);
 
   const login = (password: string): boolean => {
     if (password === CORRECT_PASSWORD) {
       setIsAuthenticated(true);
-      localStorage.setItem('robair-authenticated', 'true');
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('robair-authenticated', 'true');
+        } catch (error) {
+          console.warn('localStorage write failed:', error);
+        }
+      }
       return true;
     }
     return false;
@@ -36,7 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setIsAuthenticated(false);
-    localStorage.removeItem('robair-authenticated');
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('robair-authenticated');
+      } catch (error) {
+        console.warn('localStorage remove failed:', error);
+      }
+    }
   };
 
   if (isLoading) {
