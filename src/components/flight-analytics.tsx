@@ -35,6 +35,11 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
 
   const currentFlights = flights.data?.flights || [];
 
+  // Debug: log the first flight to see what data we're getting
+  if (currentFlights.length > 0 && process.env.NODE_ENV === 'development') {
+    console.log('First flight data:', currentFlights[0]);
+  }
+
   // Calculate this year's flights (calendar year)
   const currentYear = new Date().getFullYear();
   const thisYearFlights = currentFlights.filter(flight => {
