@@ -4,7 +4,9 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Plane, Wrench, Bot } from "lucide-react"
+import { Home, Plane, Wrench, Bot, LogOut } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
+import { Button } from "@/components/ui/button"
 
 const navigationItems = [
   {
@@ -31,6 +33,7 @@ const navigationItems = [
 
 export function Navigation() {
   const pathname = usePathname()
+  const { logout } = useAuth()
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b border-robair-black/10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -64,6 +67,16 @@ export function Navigation() {
                 </Link>
               )
             })}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={logout}
+              className="ml-2 text-robair-black hover:bg-robair-light"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
           </div>
         </div>
       </div>

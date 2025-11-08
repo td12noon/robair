@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Navigation } from "@/components/layout/navigation";
+import { AuthProvider } from "@/contexts/auth-context";
+import { ProtectedLayout } from "@/components/auth/protected-layout";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,12 +36,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans`}>
-        <div className="min-h-screen bg-background">
-          <Navigation />
-          <main className="container mx-auto px-4 py-8">
+        <AuthProvider>
+          <ProtectedLayout>
             {children}
-          </main>
-        </div>
+          </ProtectedLayout>
+        </AuthProvider>
       </body>
     </html>
   );
