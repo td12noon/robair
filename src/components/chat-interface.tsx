@@ -16,10 +16,12 @@ export function ChatInterface() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   };
 
   useEffect(() => {
@@ -111,7 +113,7 @@ export function ChatInterface() {
         </CardHeader>
 
         {/* Chat Messages Area */}
-        <CardContent className="flex-1 overflow-auto p-4">
+        <CardContent ref={chatContainerRef} className="flex-1 overflow-auto p-4">
           <div className="space-y-4">
             {/* Welcome Message */}
             <div className="flex space-x-3">
@@ -190,8 +192,6 @@ export function ChatInterface() {
                 </div>
               </div>
             )}
-
-            <div ref={messagesEndRef} />
           </div>
         </CardContent>
 
