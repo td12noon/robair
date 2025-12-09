@@ -43,6 +43,9 @@ export interface FlightInfo {
   actual_in?: string;
   aircraft_type?: string;
   registration?: string;
+  cancelled?: boolean;
+  diverted?: boolean;
+  filed_ete?: number;
 }
 
 export interface CurrentFlights {
