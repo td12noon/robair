@@ -100,11 +100,16 @@ export class FlightAwareClient {
   }
 
   /**
-   * Get current flights for an aircraft by ident
+   * Get all flights for an aircraft by ident (fetches historical data)
    */
   async getCurrentFlights(ident: string, maxPages: number = 100): Promise<Flight[]> {
     try {
-      const response = await this.getFlightByIdent(ident, undefined, undefined, maxPages);
+      // Fetch flights from 5 years ago to now to get all historical data
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setFullYear(startDate.getFullYear() - 5);
+      
+      const response = await this.getFlightByIdent(ident, startDate, endDate, maxPages);
       return response.flights || [];
     } catch (error) {
       console.error('Error getting current flights:', error);

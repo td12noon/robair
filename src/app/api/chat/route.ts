@@ -124,7 +124,7 @@ Keep responses concise but informative. Use nautical miles (nm) for distances an
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-nano',
+        model: 'gpt-4o-mini',
         messages: messages,
         max_tokens: 500,
         temperature: 0.7,
