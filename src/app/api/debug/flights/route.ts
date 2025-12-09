@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCachedFlightData } from '@/lib/supabase';
+import { getStoredFlights, getStoredFlightCount, shouldFetchFromApi } from '@/lib/supabase';
 
 const FLIGHTAWARE_BASE_URL = 'https://aeroapi.flightaware.com/aeroapi';
 
@@ -21,30 +21,41 @@ export async function GET(request: NextRequest) {
       prefix: apiKey ? `${apiKey.substring(0, 8)}...` : 'N/A',
     };
 
-    // Check cache first (unless skipping)
-    let cachedData = null;
-    let cacheInfo = { checked: false, found: false, flightsInCache: 0 };
-    
-    if (!skipCache) {
-      cacheInfo.checked = true;
-      cachedData = await getCachedFlightData(ident, 30);
-      cacheInfo.found = !!cachedData;
-      cacheInfo.flightsInCache = cachedData?.flights?.length || 0;
-    }
+    // Check stored flights in database
+    const storedFlightCount = await getStoredFlightCount(ident);
+    const needsApiFetch = await shouldFetchFromApi(ident, 30);
+    const databaseInfo = { 
+      storedFlights: storedFlightCount, 
+      needsApiFetch,
+      hint: 'Flights are stored individually in the database'
+    };
 
-    if (cachedData && !skipCache) {
+    if (!skipCache && storedFlightCount > 0 && !needsApiFetch) {
+      const storedFlights = await getStoredFlights(ident, 10);
       const responseTime = Date.now() - startTime;
+      
+      const flightsSummary = storedFlights.slice(0, 10).map((f: any) => ({
+        fa_flight_id: f.fa_flight_id,
+        ident: f.ident,
+        operator: f.operator,
+        origin: f.origin?.code,
+        destination: f.destination?.code,
+        status: f.status,
+        route_distance: f.route_distance,
+        actual_off: f.actual_off,
+      }));
+      
       return NextResponse.json({
         debug: true,
-        source: 'cache',
+        source: 'database',
         ident,
         keyInfo,
-        cacheInfo,
-        flightsCount: cachedData.flights?.length || 0,
-        flights: cachedData.flights?.slice(0, 10) || [],
+        databaseInfo,
+        flightsCount: storedFlightCount,
+        flights: flightsSummary,
         responseTimeMs: responseTime,
         timestamp: new Date().toISOString(),
-        hint: 'Add ?skipCache=true to bypass cache. Add ?testPagination=true to test multi-page fetching.',
+        hint: 'Add ?skipCache=true to bypass database and hit FlightAware API directly. Add ?testPagination=true to test multi-page fetching.',
       });
     }
 
@@ -53,14 +64,14 @@ export async function GET(request: NextRequest) {
         debug: true,
         error: 'FLIGHTAWARE_API_KEY not configured',
         keyInfo,
-        cacheInfo,
+        databaseInfo,
         timestamp: new Date().toISOString(),
       });
     }
 
     // If testing pagination, make multiple requests
     if (testPagination) {
-      return await testPaginatedFetch(ident, apiKey, keyInfo, cacheInfo, startTime);
+      return await testPaginatedFetch(ident, apiKey, keyInfo, databaseInfo, startTime);
     }
 
     // Single request for basic debug
@@ -130,7 +141,7 @@ export async function GET(request: NextRequest) {
       success: response.ok,
       ident,
       keyInfo,
-      cacheInfo,
+      databaseInfo,
       request: requestInfo,
       response: responseInfo,
       pagination: {
@@ -165,7 +176,7 @@ async function testPaginatedFetch(
   ident: string, 
   apiKey: string, 
   keyInfo: any, 
-  cacheInfo: any,
+  databaseInfo: any,
   startTime: number
 ) {
   const allFlights: any[] = [];
@@ -266,7 +277,7 @@ async function testPaginatedFetch(
       success: true,
       ident,
       keyInfo,
-      cacheInfo,
+      databaseInfo,
       pagination: {
         totalRequests: requestCount,
         totalFlights: allFlights.length,

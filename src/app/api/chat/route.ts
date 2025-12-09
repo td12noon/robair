@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { flightAware } from '@/lib/flightaware';
-import { getCachedFlightData } from '@/lib/supabase';
+import { getStoredFlights } from '@/lib/supabase';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -32,15 +32,12 @@ export async function POST(request: NextRequest) {
     let flightContext = '';
 
     try {
-      // Try cached data first (45 minute expiration for chat context)
-      let cachedData = await getCachedFlightData(aircraftIdent, 45);
-      let flights: any[] = [];
-
-      if (cachedData) {
-        flights = cachedData.flights || [];
-      } else {
-        // Fallback to API if no cache (but this will be rare since the main API caches)
-        flights = await flightAware.getCurrentFlights(aircraftIdent, 10);
+      // Get stored flights from database
+      let flights = await getStoredFlights(aircraftIdent, 200);
+      
+      // If no stored flights, try API as fallback
+      if (flights.length === 0) {
+        flights = await flightAware.getCurrentFlights(aircraftIdent, 30);
       }
 
       // Calculate basic stats for context

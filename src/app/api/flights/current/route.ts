@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { flightAware, FlightAwareError } from '@/lib/flightaware';
-import { getCachedFlightData, setCachedFlightData } from '@/lib/supabase';
+import { 
+  getStoredFlights, 
+  storeFlights, 
+  shouldFetchFromApi, 
+  updateApiFetchLog,
+  getStoredFlightCount 
+} from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const ident = searchParams.get('ident');
+    const forceRefresh = searchParams.get('refresh') === 'true';
 
     if (!ident) {
       return NextResponse.json(
@@ -14,60 +21,68 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check cache first (30 minute expiration to avoid rate limits)
-    console.log('Checking cache for flight data...');
-    let cachedData = await getCachedFlightData(ident, 30);
-
     let flights: any[] = [];
     let fromCache = false;
+    let newFlightsStored = 0;
 
-    if (cachedData) {
-      console.log('Using cached flight data');
-      flights = cachedData.flights || [];
+    // Check if we should fetch from API (every 30 minutes)
+    const needsApiCall = forceRefresh || await shouldFetchFromApi(ident, 30);
+
+    if (!needsApiCall) {
+      // Use stored flights from database
+      console.log('Using stored flights from database...');
+      flights = await getStoredFlights(ident, 200);
       fromCache = true;
+      console.log(`Retrieved ${flights.length} stored flights`);
     } else {
-      console.log('Cache miss, fetching from FlightAware API...');
+      console.log('Fetching fresh data from FlightAware API...');
+      
       try {
-        // Use getCurrentFlights with pagination to get up to 90 flights
-        const flightsArray = await flightAware.getCurrentFlights(ident, 90);
-        flights = flightsArray || [];
-
-        // Only cache if we got actual results (don't cache empty responses)
-        if (flights.length > 0) {
-          const cacheData = {
-            flights,
-            timestamp: new Date().toISOString(),
-            source: 'FlightAware API'
-          };
-
-          const cached = await setCachedFlightData(ident, cacheData);
-          console.log('Cached flight data:', cached ? 'success' : 'failed');
-        } else {
-          console.log('Empty response from FlightAware, not caching');
+        // Fetch from FlightAware API (with pagination for up to 90 flights)
+        const apiFlights = await flightAware.getCurrentFlights(ident, 90);
+        
+        if (apiFlights.length > 0) {
+          // Store the new flights in the database
+          const { stored, errors } = await storeFlights(apiFlights);
+          newFlightsStored = stored;
+          console.log(`Stored ${stored} flights, ${errors} errors`);
+          
+          // Update fetch log
+          await updateApiFetchLog(ident, apiFlights.length);
         }
+
+        // Get all flights from database (includes historical + new)
+        flights = await getStoredFlights(ident, 200);
+        console.log(`Total flights in database: ${flights.length}`);
+        
       } catch (apiError) {
-        // If API fails, try to get slightly older cached data (up to 2 hours)
-        console.log('FlightAware API failed, checking for older cached data...');
-        cachedData = await getCachedFlightData(ident, 120);
-
-        if (cachedData) {
-          console.log('Using older cached data due to API failure');
-          flights = cachedData.flights || [];
-          fromCache = true;
-        } else {
-          // Re-throw the error if no cache available
-          throw apiError;
+        console.error('FlightAware API failed:', apiError);
+        
+        // Fall back to stored flights if API fails
+        flights = await getStoredFlights(ident, 200);
+        fromCache = true;
+        
+        if (flights.length === 0) {
+          throw apiError; // Re-throw if we have nothing
         }
+        
+        console.log(`Using ${flights.length} stored flights due to API failure`);
       }
     }
+
+    const storedCount = await getStoredFlightCount(ident);
 
     return NextResponse.json({
       ident,
       flights,
       count: flights.length,
+      totalStored: storedCount,
+      newFlightsStored,
       timestamp: new Date().toISOString(),
       fromCache,
-      cacheInfo: fromCache ? 'Data served from cache to avoid API rate limits' : 'Fresh data from FlightAware API'
+      cacheInfo: fromCache 
+        ? 'Data served from database to avoid API rate limits' 
+        : `Fresh data merged with database (${newFlightsStored} new flights stored)`
     });
   } catch (error) {
     console.error('Error fetching current flights:', error);
