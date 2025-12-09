@@ -28,20 +28,23 @@ export async function GET(request: NextRequest) {
     } else {
       console.log('Cache miss, fetching from FlightAware API...');
       try {
-        // Use getCurrentFlights method which doesn't have date restrictions
-        const flightsArray = await flightAware.getCurrentFlights(ident, 100);
-        const response = { flights: flightsArray };
-        flights = response.flights || [];
+        // Use getCurrentFlights with pagination to get up to 90 flights
+        const flightsArray = await flightAware.getCurrentFlights(ident, 90);
+        flights = flightsArray || [];
 
-        // Cache the result
-        const cacheData = {
-          flights,
-          timestamp: new Date().toISOString(),
-          source: 'FlightAware API'
-        };
+        // Only cache if we got actual results (don't cache empty responses)
+        if (flights.length > 0) {
+          const cacheData = {
+            flights,
+            timestamp: new Date().toISOString(),
+            source: 'FlightAware API'
+          };
 
-        const cached = await setCachedFlightData(ident, cacheData);
-        console.log('Cached flight data:', cached ? 'success' : 'failed');
+          const cached = await setCachedFlightData(ident, cacheData);
+          console.log('Cached flight data:', cached ? 'success' : 'failed');
+        } else {
+          console.log('Empty response from FlightAware, not caching');
+        }
       } catch (apiError) {
         // If API fails, try to get slightly older cached data (up to 2 hours)
         console.log('FlightAware API failed, checking for older cached data...');

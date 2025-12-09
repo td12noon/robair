@@ -100,18 +100,69 @@ export class FlightAwareClient {
   }
 
   /**
-   * Get flights for an aircraft by ident
-   * Note: FlightAware API returns recent flights by default (typically last 2 weeks)
+   * Get flights for an aircraft by ident with pagination
+   * FlightAware returns ~15 results per page, so we paginate to get more
    */
-  async getCurrentFlights(ident: string, maxPages: number = 100): Promise<Flight[]> {
+  async getCurrentFlights(ident: string, targetFlights: number = 90): Promise<Flight[]> {
+    const allFlights: Flight[] = [];
+    let cursor: string | undefined = undefined;
+    const maxRequests = Math.ceil(targetFlights / 15); // ~15 results per page
+    let requestCount = 0;
+
     try {
-      // Don't pass date parameters - let FlightAware return its default range
-      // This avoids date format issues and works within API limits
-      const response = await this.getFlightByIdent(ident, undefined, undefined, maxPages);
-      return response.flights || [];
+      while (requestCount < maxRequests) {
+        requestCount++;
+        
+        // Build endpoint with cursor if we have one
+        let endpoint = `/flights/${encodeURIComponent(ident)}`;
+        const params = new URLSearchParams();
+        if (cursor) {
+          params.append('cursor', cursor);
+        }
+        if (params.toString()) {
+          endpoint += `?${params.toString()}`;
+        }
+
+        console.log(`FlightAware request ${requestCount}/${maxRequests}, cursor: ${cursor || 'none'}`);
+        
+        const response = await this.request<FlightResponse>(endpoint);
+        const flights = response.flights || [];
+        
+        if (flights.length === 0) {
+          console.log('No more flights available');
+          break;
+        }
+
+        allFlights.push(...flights);
+        console.log(`Got ${flights.length} flights, total: ${allFlights.length}`);
+
+        // Check if there's a next page
+        if (response.links?.next) {
+          // Extract cursor from the next link URL
+          const nextUrl = new URL(response.links.next, this.baseUrl);
+          cursor = nextUrl.searchParams.get('cursor') || undefined;
+          
+          if (!cursor) {
+            console.log('No cursor in next link, stopping pagination');
+            break;
+          }
+        } else {
+          console.log('No next link, stopping pagination');
+          break;
+        }
+
+        // Stop if we have enough flights
+        if (allFlights.length >= targetFlights) {
+          console.log(`Reached target of ${targetFlights} flights`);
+          break;
+        }
+      }
+
+      return allFlights;
     } catch (error) {
       console.error('Error getting current flights:', error);
-      return [];
+      // Return whatever we got so far
+      return allFlights;
     }
   }
 
