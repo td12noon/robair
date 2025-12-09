@@ -122,30 +122,6 @@ export default function ChatPage() {
         </Card>
       </div>
 
-      {/* Setup Notice */}
-      <Card className="border-dashed bg-amber-50 border-amber-200">
-        <CardHeader>
-          <CardTitle className="text-amber-800 flex items-center">
-            <Key className="mr-2 h-5 w-5" />
-            OpenAI Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-amber-700">
-              To unlock the full potential of your AI assistant, add your OpenAI API key:
-            </p>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-amber-700">
-              <li>Get an API key from <code className="text-xs bg-amber-100 px-1 rounded">platform.openai.com</code></li>
-              <li>Add <code className="text-xs bg-amber-100 px-1 rounded">OPENAI_API_KEY=your_key_here</code> to Vercel environment variables</li>
-              <li>Redeploy the application to enable AI chat</li>
-            </ol>
-            <p className="text-xs text-amber-600">
-              Without the API key, the assistant will still work but with limited functionality.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -39,12 +39,12 @@ export function Navigation() {
     <nav className="sticky top-0 z-50 w-full border-b border-robair-black/10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-robair-green">
               <Plane className="h-4 w-4 text-background" />
             </div>
             <span className="text-xl font-bold text-robair-black">Rob Air</span>
-          </div>
+          </Link>
 
           <div className="flex items-center space-x-1">
             {navigationItems.map((item) => {
