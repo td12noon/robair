@@ -1,93 +1,160 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { flightAware, FlightAwareError } from '@/lib/flightaware';
 import { getCachedFlightData } from '@/lib/supabase';
 
+const FLIGHTAWARE_BASE_URL = 'https://aeroapi.flightaware.com/aeroapi';
+
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  
   try {
     const { searchParams } = new URL(request.url);
-    const ident = searchParams.get('ident') || 'N424BB';
+    const ident = searchParams.get('ident') || process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || 'N424BB';
+    const skipCache = searchParams.get('skipCache') === 'true';
 
-    console.log('=== DEBUG: Fetching flights for:', ident);
+    const apiKey = process.env.FLIGHTAWARE_API_KEY;
+    
+    // Check API key
+    const keyInfo = {
+      exists: !!apiKey,
+      length: apiKey?.length || 0,
+      prefix: apiKey ? `${apiKey.substring(0, 8)}...` : 'N/A',
+    };
 
-    // Try to get cached data first (30 minute expiration)
-    let cachedData = await getCachedFlightData(ident, 30);
-    let response;
-
-    if (cachedData) {
-      console.log('=== DEBUG: Using cached data');
-      response = { flights: cachedData.flights, num_pages: 1 };
-    } else {
-      console.log('=== DEBUG: Cache miss, fetching from FlightAware API...');
-      // Get raw FlightAware response
-      const flights = await flightAware.getCurrentFlights(ident, 100);
-      response = { flights, num_pages: 1 };
+    // Check cache first (unless skipping)
+    let cachedData = null;
+    let cacheInfo = { checked: false, found: false, age: null as number | null };
+    
+    if (!skipCache) {
+      cacheInfo.checked = true;
+      cachedData = await getCachedFlightData(ident, 30);
+      cacheInfo.found = !!cachedData;
     }
 
-    console.log('=== DEBUG: Raw FlightAware response structure:', {
-      flightsCount: response.flights?.length || 0,
-      numPages: response.num_pages || 1,
-      fromCache: !!cachedData,
-      maxPagesRequested: 100
-    });
-
-    // Log first flight details if available
-    if (response.flights && response.flights.length > 0) {
-      const firstFlight = response.flights[0];
-      console.log('=== DEBUG: First flight details:', {
-        ident: firstFlight.ident,
-        fa_flight_id: firstFlight.fa_flight_id,
-        operator: firstFlight.operator,
-        route_distance: firstFlight.route_distance,
-        scheduled_off: firstFlight.scheduled_off,
-        actual_off: firstFlight.actual_off,
-        status: firstFlight.status,
-        origin: firstFlight.origin,
-        destination: firstFlight.destination,
-        aircraft_type: firstFlight.aircraft_type
+    if (cachedData && !skipCache) {
+      const responseTime = Date.now() - startTime;
+      return NextResponse.json({
+        debug: true,
+        source: 'cache',
+        ident,
+        keyInfo,
+        cacheInfo,
+        flightsCount: cachedData.flights?.length || 0,
+        flights: cachedData.flights?.slice(0, 5) || [],
+        responseTimeMs: responseTime,
+        timestamp: new Date().toISOString(),
+        hint: 'Add ?skipCache=true to bypass cache and hit FlightAware API directly',
       });
     }
 
-    // Calculate current year flights
-    const currentYear = new Date().getFullYear();
-    const thisYearFlights = response.flights?.filter((flight: any) => {
-      const flightDate = new Date(flight.actual_off || flight.scheduled_off || '');
-      const flightYear = flightDate.getFullYear();
-      console.log(`Flight ${flight.fa_flight_id}: ${flight.actual_off || flight.scheduled_off} -> Year: ${flightYear}, Current: ${currentYear}, Match: ${flightYear === currentYear}`);
-      return flightYear === currentYear;
-    }) || [];
+    if (!apiKey) {
+      return NextResponse.json({
+        debug: true,
+        error: 'FLIGHTAWARE_API_KEY not configured',
+        keyInfo,
+        cacheInfo,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-    console.log('=== DEBUG: Filtered flights for', currentYear, ':', thisYearFlights.length);
+    // Build request for 5 years of data
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - 5);
+
+    const params = new URLSearchParams();
+    params.append('start', startDate.toISOString());
+    params.append('end', endDate.toISOString());
+    params.append('max_pages', '100');
+
+    const url = `${FLIGHTAWARE_BASE_URL}/flights/${encodeURIComponent(ident)}?${params.toString()}`;
+
+    const requestInfo = {
+      url,
+      method: 'GET',
+      headers: {
+        'x-apikey': `${apiKey.substring(0, 8)}...`,
+        'Content-Type': 'application/json',
+      },
+      params: {
+        ident,
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        max_pages: 100,
+      },
+    };
+
+    // Make the request
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-apikey': apiKey,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const responseTime = Date.now() - startTime;
+
+    // Get raw response
+    const rawResponseText = await response.text();
+    let parsedResponse: any = null;
+    let parseError: string | null = null;
+
+    try {
+      parsedResponse = JSON.parse(rawResponseText);
+    } catch (e) {
+      parseError = `Failed to parse response: ${e instanceof Error ? e.message : 'Unknown error'}`;
+    }
+
+    const responseInfo = {
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      rawBodyPreview: rawResponseText.substring(0, 1000),
+      rawBodyLength: rawResponseText.length,
+      parseError,
+    };
+
+    // Extract flight info
+    const flights = parsedResponse?.flights || [];
+    const flightsSummary = flights.slice(0, 5).map((f: any) => ({
+      fa_flight_id: f.fa_flight_id,
+      ident: f.ident,
+      operator: f.operator,
+      origin: f.origin?.code,
+      destination: f.destination?.code,
+      status: f.status,
+      route_distance: f.route_distance,
+      actual_off: f.actual_off,
+      scheduled_off: f.scheduled_off,
+    }));
 
     return NextResponse.json({
       debug: true,
+      source: 'api',
+      success: response.ok,
       ident,
-      currentYear,
-      totalFlights: response.flights?.length || 0,
-      thisYearFlights: thisYearFlights.length,
-      rawResponse: {
-        flights: response.flights?.slice(0, 3) || [], // First 3 flights for inspection
-        num_pages: response.num_pages
-      },
-      filteredFlights: thisYearFlights.slice(0, 3), // First 3 filtered flights
-      timestamp: new Date().toISOString()
+      keyInfo,
+      cacheInfo,
+      request: requestInfo,
+      response: responseInfo,
+      flightsCount: flights.length,
+      numPages: parsedResponse?.num_pages,
+      flights: flightsSummary,
+      responseTimeMs: responseTime,
+      timestamp: new Date().toISOString(),
     });
 
   } catch (error) {
-    console.error('=== DEBUG: Error fetching flights:', error);
-
-    if (error instanceof FlightAwareError) {
-      return NextResponse.json({
-        error: error.message,
-        code: error.code,
-        status: error.status,
-        debug: true
-      }, { status: error.status || 500 });
-    }
-
+    const responseTime = Date.now() - startTime;
+    
     return NextResponse.json({
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error',
-      debug: true
+      debug: true,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined,
+      responseTimeMs: responseTime,
+      timestamp: new Date().toISOString(),
     }, { status: 500 });
   }
 }

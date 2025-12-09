@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Home, Plane, Wrench, Bot, LogOut, BarChart3 } from "lucide-react"
+import { Home, Plane, Wrench, Bot, LogOut, BarChart3, Bug } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 
@@ -23,6 +23,11 @@ const navigationItems = [
     name: "AI Chatbot",
     href: "/chat",
     icon: Bot,
+  },
+  {
+    name: "Debug",
+    href: "/debug",
+    icon: Bug,
   },
 ]
 
