@@ -56,14 +56,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Build request for 5 years of data
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setFullYear(startDate.getFullYear() - 5);
-
+    // Build request - no date params to avoid format issues
     const params = new URLSearchParams();
-    params.append('start', startDate.toISOString());
-    params.append('end', endDate.toISOString());
     params.append('max_pages', '100');
 
     const url = `${FLIGHTAWARE_BASE_URL}/flights/${encodeURIComponent(ident)}?${params.toString()}`;
@@ -77,8 +71,6 @@ export async function GET(request: NextRequest) {
       },
       params: {
         ident,
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
         max_pages: 100,
       },
     };

@@ -100,16 +100,14 @@ export class FlightAwareClient {
   }
 
   /**
-   * Get all flights for an aircraft by ident (fetches historical data)
+   * Get flights for an aircraft by ident
+   * Note: FlightAware API returns recent flights by default (typically last 2 weeks)
    */
   async getCurrentFlights(ident: string, maxPages: number = 100): Promise<Flight[]> {
     try {
-      // Fetch flights from 5 years ago to now to get all historical data
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setFullYear(startDate.getFullYear() - 5);
-      
-      const response = await this.getFlightByIdent(ident, startDate, endDate, maxPages);
+      // Don't pass date parameters - let FlightAware return its default range
+      // This avoids date format issues and works within API limits
+      const response = await this.getFlightByIdent(ident, undefined, undefined, maxPages);
       return response.flights || [];
     } catch (error) {
       console.error('Error getting current flights:', error);
