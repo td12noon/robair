@@ -15,8 +15,8 @@ export default function Home() {
               <Image
                 src="/robair-logo.svg"
                 alt="Rob Air Logo"
-                width={200}
-                height={180}
+                width={180}
+                height={200}
                 priority
               />
             </div>
