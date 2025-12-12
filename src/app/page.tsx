@@ -13,9 +13,9 @@ export default function Home() {
             {/* Company Logo */}
             <div className="flex justify-center lg:justify-start mb-4">
               <Image
-                src="/robair-logo.svg"
+                src="/robair-logo.png"
                 alt="Rob Air Logo"
-                width={180}
+                width={200}
                 height={200}
                 priority
               />
