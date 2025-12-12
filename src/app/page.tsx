@@ -1,4 +1,4 @@
-import { Plane } from "lucide-react";
+import Image from "next/image";
 import { FlightMap } from "@/components/flight-map";
 import { FlightAnalytics } from "@/components/flight-analytics";
 
@@ -10,18 +10,24 @@ export default function Home() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left Side - Welcome Content */}
           <div className="space-y-6">
-            <div className="flex items-center space-x-3 mb-6">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-robair-green">
-                <Plane className="h-8 w-8 text-background" />
-              </div>
-              <div>
-                <h1 className="text-4xl font-bold text-robair-black">
-                  Welcome to Rob Air
-                </h1>
-                <p className="text-lg text-robair-black/70">
-                  Your Personal Flight Management System
-                </p>
-              </div>
+            {/* Company Logo */}
+            <div className="flex justify-center lg:justify-start mb-4">
+              <Image
+                src="/robair-logo.png"
+                alt="Rob Air Logo"
+                width={200}
+                height={200}
+                priority
+              />
+            </div>
+            
+            <div>
+              <h1 className="text-4xl font-bold text-robair-black">
+                Welcome to Rob Air
+              </h1>
+              <p className="text-lg text-robair-black/70">
+                Your Personal Flight Management System
+              </p>
             </div>
 
             <p className="text-xl text-robair-black/80 leading-relaxed">
