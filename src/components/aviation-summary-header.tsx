@@ -1,31 +1,25 @@
 "use client";
 
 import React from "react";
-import { useFlightData } from "@/hooks/useFlightData";
+import { useFlightData, type FlightInfo } from "@/hooks/useFlightData";
 
-function getFlightYear(flight: any): number | null {
+function getFlightYear(flight: FlightInfo): number | null {
   const flightDateStr =
-    (flight as any).actual_off ||
-    (flight as any).scheduled_off ||
-    (flight as any).actual_out ||
-    (flight as any).scheduled_out ||
-    "";
-  const flightDate = new Date(flightDateStr);
-  const year = flightDate.getFullYear();
+    flight.actual_off ?? flight.scheduled_off ?? flight.actual_out ?? flight.scheduled_out ?? "";
+  const year = new Date(flightDateStr).getFullYear();
   return Number.isFinite(year) ? year : null;
 }
 
-function isCompletedFlight(flight: any): boolean {
+function isCompletedFlight(flight: FlightInfo): boolean {
   return !flight.cancelled && flight.status !== "Cancelled";
 }
 
 export function AviationSummaryHeader({ ident, year = 2026 }: { ident: string; year?: number }) {
   const { flights } = useFlightData(ident);
-  const allFlights = flights.data?.flights || [];
-
   const yearFlightsCount = React.useMemo(() => {
+    const allFlights = flights.data?.flights ?? [];
     return allFlights.filter((f) => isCompletedFlight(f) && getFlightYear(f) === year).length;
-  }, [allFlights, year]);
+  }, [flights.data?.flights, year]);
 
   return (
     <div className="mt-2 space-y-1 text-robair-black/70">
