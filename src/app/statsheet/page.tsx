@@ -16,7 +16,7 @@ import {
   Award,
   Zap
 } from "lucide-react";
-import { useFlightData } from '@/hooks/useFlightData';
+import { useFlightData, type FlightInfo } from '@/hooks/useFlightData';
 
 // Earth's circumference in nautical miles
 const EARTH_CIRCUMFERENCE_NM = 21600;
@@ -24,8 +24,14 @@ const EARTH_CIRCUMFERENCE_NM = 21600;
 // SR22 fuel burn rate (gallons per hour)
 const SR22_FUEL_BURN_GPH = 17;
 
+const STATS_YEAR = 2026;
+
+type FlightForStats = FlightInfo & {
+  actual_on?: string;
+};
+
 // Get flight time in hours from filed_ete (seconds)
-const getFlightHours = (flight: any): number => {
+const getFlightHours = (flight: FlightForStats): number => {
   if (flight.filed_ete && flight.filed_ete > 0) {
     return flight.filed_ete / 3600;
   }
@@ -44,13 +50,22 @@ const getFlightHours = (flight: any): number => {
   return 0;
 };
 
+const getFlightYear = (flight: FlightForStats): number | null => {
+  const dateStr =
+    flight.actual_off ?? flight.scheduled_off ?? flight.actual_out ?? flight.scheduled_out ?? '';
+  const year = new Date(dateStr).getFullYear();
+  return Number.isFinite(year) ? year : null;
+};
+
 export default function StatsheetPage() {
   const ident = process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N424BB";
   const { flights } = useFlightData(ident);
-  const allFlights = flights.data?.flights || [];
+  const allFlights = (flights.data?.flights || []) as FlightForStats[];
 
-  // Filter out cancelled flights
-  const completedFlights = allFlights.filter(f => !f.cancelled && f.status !== 'Cancelled');
+  // Only count completed flights in 2026
+  const completedFlights = allFlights.filter((f) => {
+    return !f.cancelled && f.status !== 'Cancelled' && getFlightYear(f) === STATS_YEAR;
+  });
 
   // Calculate all statistics
   const totalFlights = completedFlights.length;
@@ -105,7 +120,7 @@ export default function StatsheetPage() {
   });
 
   // Current year stats
-  const currentYear = new Date().getFullYear();
+  const currentYear = STATS_YEAR;
   const thisYearFlights = completedFlights.filter(f => {
     const dateStr = (f as any).actual_off || (f as any).scheduled_off || '';
     return new Date(dateStr).getFullYear() === currentYear;
@@ -121,14 +136,14 @@ export default function StatsheetPage() {
       title: "Total Flights",
       value: totalFlights.toLocaleString(),
       icon: Plane,
-      description: "All-time completed flights",
+      description: `${STATS_YEAR} completed flights`,
       color: "bg-emerald-500",
     },
     {
       title: "Nautical Miles",
       value: totalMiles.toLocaleString(),
       icon: Navigation,
-      description: "Total distance flown",
+      description: `Total distance flown in ${STATS_YEAR}`,
       color: "bg-blue-500",
     },
     {
@@ -142,7 +157,7 @@ export default function StatsheetPage() {
       title: "Flight Hours",
       value: Math.round(totalHours).toLocaleString(),
       icon: Clock,
-      description: "Estimated total time aloft",
+      description: `Estimated total time aloft in ${STATS_YEAR}`,
       color: "bg-amber-500",
     },
   ];

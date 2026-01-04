@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { FlightMap } from "@/components/flight-map";
 import { FlightAnalytics } from "@/components/flight-analytics";
+import { AviationSummaryHeader } from "@/components/aviation-summary-header";
 
 export default function Home() {
   return (
@@ -51,7 +52,7 @@ export default function Home() {
       <div className="space-y-6">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-robair-black">Flight Analytics</h2>
-          <p className="text-robair-black/70 mt-2">Your {new Date().getFullYear()} aviation summary</p>
+          <AviationSummaryHeader ident={process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N424BB"} year={2026} />
         </div>
         <FlightAnalytics ident={process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N424BB"} />
       </div>

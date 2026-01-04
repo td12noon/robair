@@ -3,14 +3,16 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane, MapPin, Heart, TrendingUp } from "lucide-react";
-import { useFlightData } from '@/hooks/useFlightData';
+import { useFlightData, type FlightInfo } from '@/hooks/useFlightData';
 
 interface FlightAnalyticsProps {
   ident: string;
 }
 
+const SUMMARY_YEAR = 2026;
+
 // Get flight distance from FlightAware data or fallback to 0
-const getFlightDistance = (flight: any): number => {
+const getFlightDistance = (flight: FlightInfo): number => {
   // Use FlightAware route_distance if available (in nautical miles)
   if (flight.route_distance && flight.route_distance > 0) {
     return flight.route_distance;
@@ -31,40 +33,26 @@ const isAngelFlight = (operator?: string): boolean => {
          operator === 'Air Charity Network';
 };
 
+const isCompletedFlight = (flight: FlightInfo): boolean => {
+  return !flight.cancelled && flight.status !== "Cancelled";
+};
+
+const getFlightYear = (flight: FlightInfo): number | null => {
+  const flightDateStr =
+    flight.actual_off ?? flight.scheduled_off ?? flight.actual_out ?? flight.scheduled_out ?? "";
+  const year = new Date(flightDateStr).getFullYear();
+  return Number.isFinite(year) ? year : null;
+};
+
 export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
   const { flights } = useFlightData(ident);
 
   const currentFlights = flights.data?.flights || [];
 
-  // Debug: log flight data
-  console.log('=== ANALYTICS DEBUG ===');
-  console.log('Total flights received:', currentFlights.length);
-  if (currentFlights.length > 0) {
-    console.log('First flight sample:', {
-      ident: currentFlights[0].ident,
-      fa_flight_id: currentFlights[0].fa_flight_id,
-      operator: currentFlights[0].operator,
-      route_distance: currentFlights[0].route_distance,
-      scheduled_out: currentFlights[0].scheduled_out,
-      actual_out: currentFlights[0].actual_out,
-      status: currentFlights[0].status
-    });
-  }
-
-  // Calculate this year's flights (calendar year)
-  const currentYear = new Date().getFullYear();
-  console.log('Current year:', currentYear);
-
-  const thisYearFlights = currentFlights.filter(flight => {
-    // FlightAware uses actual_off/scheduled_off for departure times, not actual_out/scheduled_out
-    const flightDateStr = (flight as any).actual_off || (flight as any).scheduled_off || flight.actual_out || flight.scheduled_out || '';
-    const flightDate = new Date(flightDateStr);
-    const flightYear = flightDate.getFullYear();
-    console.log(`Flight ${flight.fa_flight_id}: date=${flightDateStr}, year=${flightYear}, currentYear=${currentYear}, match=${flightYear === currentYear}`);
-    return flightYear === currentYear && !isNaN(flightYear);
+  // Calculate 2026 flights (calendar year)
+  const thisYearFlights = currentFlights.filter((flight) => {
+    return isCompletedFlight(flight) && getFlightYear(flight) === SUMMARY_YEAR;
   });
-
-  console.log('Flights this year:', thisYearFlights.length);
 
   // Calculate total miles and Angel Flight miles
   let totalMiles = 0;
@@ -76,7 +64,6 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
     totalMiles += distance;
 
     const angelFlight = isAngelFlight(flight.operator);
-    console.log(`Flight ${flight.fa_flight_id}: operator=${flight.operator}, distance=${distance}, isAngel=${angelFlight}`);
 
     if (angelFlight) {
       angelFlightMiles += distance;
@@ -84,21 +71,19 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
     }
   });
 
-  console.log(`Total Angel Flight miles: ${angelFlightMiles}, Angel Flight count: ${angelFlightCount}`);
-
   const stats = [
     {
       title: "Flights This Year",
       value: thisYearFlights.length.toLocaleString(),
       icon: Plane,
-      description: `${currentYear} flight activity`,
+      description: `${SUMMARY_YEAR} flight activity`,
       color: "text-robair-green",
     },
     {
       title: "Total Miles Flown",
       value: totalMiles.toLocaleString(),
       icon: MapPin,
-      description: "Nautical miles this year",
+      description: `Nautical miles in ${SUMMARY_YEAR}`,
       color: "text-blue-600",
     },
     {
