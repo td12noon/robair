@@ -1,5 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bot, Sparkles, MessageCircle, Lightbulb, Key } from "lucide-react";
+import { Bot } from "lucide-react";
 import { ChatInterface } from "@/components/chat-interface";
 
 export default function ChatPage() {
@@ -22,106 +21,6 @@ export default function ChatPage() {
 
       {/* Chat Interface */}
       <ChatInterface />
-
-      {/* Example Questions */}
-      <div className="max-w-4xl mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Lightbulb className="mr-2 h-5 w-5" />
-              Example Questions
-            </CardTitle>
-            <CardDescription>
-              Here are some examples of what you can ask the AI assistant
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <h4 className="font-semibold text-robair-black">Maintenance Questions</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="p-2 bg-robair-light rounded cursor-pointer hover:bg-robair-light/80">
-                    "When was the last oil change?"
-                  </div>
-                  <div className="p-2 bg-robair-light rounded cursor-pointer hover:bg-robair-light/80">
-                    "What maintenance is due this month?"
-                  </div>
-                  <div className="p-2 bg-robair-light rounded cursor-pointer hover:bg-robair-light/80">
-                    "Show me propeller maintenance history"
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-semibold text-robair-black">Flight Questions</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="p-2 bg-robair-light rounded cursor-pointer hover:bg-robair-light/80">
-                    "How many flights to LAX this year?"
-                  </div>
-                  <div className="p-2 bg-robair-light rounded cursor-pointer hover:bg-robair-light/80">
-                    "What's my total flight time?"
-                  </div>
-                  <div className="p-2 bg-robair-light rounded cursor-pointer hover:bg-robair-light/80">
-                    "Where did I fly last weekend?"
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Features */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-robair-green/10 rounded-lg">
-                <Sparkles className="h-6 w-6 text-robair-green" />
-              </div>
-              <CardTitle>Smart Insights</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-base">
-              Get intelligent analysis of your flight patterns, maintenance trends, and aircraft performance.
-            </CardDescription>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-robair-green/10 rounded-lg">
-                <MessageCircle className="h-6 w-6 text-robair-green" />
-              </div>
-              <CardTitle>Natural Language</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-base">
-              Ask questions in plain English and get clear, helpful answers about your aircraft data.
-            </CardDescription>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <div className="p-2 bg-robair-green/10 rounded-lg">
-                <Bot className="h-6 w-6 text-robair-green" />
-              </div>
-              <CardTitle>24/7 Available</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <CardDescription className="text-base">
-              Your AI assistant is always ready to help with aircraft information and aviation questions.
-            </CardDescription>
-          </CardContent>
-        </Card>
-      </div>
-
     </div>
   );
 }

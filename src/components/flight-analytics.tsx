@@ -9,8 +9,6 @@ interface FlightAnalyticsProps {
   ident: string;
 }
 
-const SUMMARY_YEAR = 2026;
-
 // Get flight distance from FlightAware data or fallback to 0
 const getFlightDistance = (flight: FlightInfo): number => {
   // Use FlightAware route_distance if available (in nautical miles)
@@ -37,11 +35,18 @@ const isCompletedFlight = (flight: FlightInfo): boolean => {
   return !flight.cancelled && flight.status !== "Cancelled";
 };
 
-const getFlightYear = (flight: FlightInfo): number | null => {
+// Get flight date as Date object
+const getFlightDate = (flight: FlightInfo): Date | null => {
   const flightDateStr =
     flight.actual_off ?? flight.scheduled_off ?? flight.actual_out ?? flight.scheduled_out ?? "";
-  const year = new Date(flightDateStr).getFullYear();
-  return Number.isFinite(year) ? year : null;
+  if (!flightDateStr) return null;
+  const date = new Date(flightDateStr);
+  return isNaN(date.getTime()) ? null : date;
+};
+
+// Format date for display (e.g., "Jan 2024")
+const formatDateRange = (date: Date): string => {
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
 };
 
 export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
@@ -49,17 +54,33 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
 
   const currentFlights = flights.data?.flights || [];
 
-  // Calculate 2026 flights (calendar year)
-  const thisYearFlights = currentFlights.filter((flight) => {
-    return isCompletedFlight(flight) && getFlightYear(flight) === SUMMARY_YEAR;
+  // Calculate all-time completed flights
+  const completedFlights = currentFlights.filter((flight) => {
+    return isCompletedFlight(flight);
   });
+
+  // Calculate date range
+  const { earliestDate, latestDate } = React.useMemo(() => {
+    let earliest: Date | null = null;
+    let latest: Date | null = null;
+
+    completedFlights.forEach(flight => {
+      const date = getFlightDate(flight);
+      if (date) {
+        if (!earliest || date < earliest) earliest = date;
+        if (!latest || date > latest) latest = date;
+      }
+    });
+
+    return { earliestDate: earliest, latestDate: latest };
+  }, [completedFlights]);
 
   // Calculate total miles and Angel Flight miles
   let totalMiles = 0;
   let angelFlightMiles = 0;
   let angelFlightCount = 0;
 
-  thisYearFlights.forEach(flight => {
+  completedFlights.forEach(flight => {
     const distance = getFlightDistance(flight);
     totalMiles += distance;
 
@@ -73,17 +94,17 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
 
   const stats = [
     {
-      title: "Flights This Year",
-      value: thisYearFlights.length.toLocaleString(),
+      title: "Total Flights",
+      value: completedFlights.length.toLocaleString(),
       icon: Plane,
-      description: `${SUMMARY_YEAR} flight activity`,
+      description: "All-time flight activity",
       color: "text-robair-green",
     },
     {
       title: "Total Miles Flown",
       value: totalMiles.toLocaleString(),
       icon: MapPin,
-      description: `Nautical miles in ${SUMMARY_YEAR}`,
+      description: "All-time nautical miles",
       color: "text-blue-600",
     },
     {
@@ -95,12 +116,17 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
     },
     {
       title: "Average Flight Distance",
-      value: thisYearFlights.length > 0 ? Math.round(totalMiles / thisYearFlights.length).toLocaleString() : "0",
+      value: completedFlights.length > 0 ? Math.round(totalMiles / completedFlights.length).toLocaleString() : "0",
       icon: TrendingUp,
       description: "Nautical miles per flight",
       color: "text-purple-600",
     },
   ];
+
+  // Date range string
+  const dateRangeString = earliestDate && latestDate
+    ? `Data from ${formatDateRange(earliestDate)} - ${formatDateRange(latestDate)}`
+    : null;
 
   if (flights.error) {
     return (
@@ -120,26 +146,31 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {stats.map((stat) => {
-        const Icon = stat.icon;
-        return (
-          <Card key={stat.title} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-robair-black/70">
-                {stat.title}
-              </CardTitle>
-              <Icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-robair-black">{stat.value}</div>
-              <p className="text-xs text-robair-black/50 mt-1">
-                {stat.description}
-              </p>
-            </CardContent>
-          </Card>
-        );
-      })}
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {stats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.title} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-robair-black/70">
+                  {stat.title}
+                </CardTitle>
+                <Icon className={`h-4 w-4 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-robair-black">{stat.value}</div>
+                <p className="text-xs text-robair-black/50 mt-1">
+                  {stat.description}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+      {dateRangeString && (
+        <p className="text-center text-sm text-robair-black/60">{dateRangeString}</p>
+      )}
     </div>
   );
 }
