@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { 
   BarChart3, 
@@ -24,7 +24,7 @@ const EARTH_CIRCUMFERENCE_NM = 21600;
 // SR22 fuel burn rate (gallons per hour)
 const SR22_FUEL_BURN_GPH = 17;
 
-const STATS_YEAR = 2026;
+type YearFilter = 2025 | 2026 | "all-time";
 
 type FlightForStats = FlightInfo & {
   actual_on?: string;
@@ -57,14 +57,21 @@ const getFlightYear = (flight: FlightForStats): number | null => {
   return Number.isFinite(year) ? year : null;
 };
 
+const getYearLabel = (yearFilter: YearFilter): string => {
+  return yearFilter === "all-time" ? "All-Time" : yearFilter.toString();
+};
+
 export default function StatsheetPage() {
   const ident = process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N424BB";
+  const [yearFilter, setYearFilter] = useState<YearFilter>(2026);
   const { flights } = useFlightData(ident);
   const allFlights = (flights.data?.flights || []) as FlightForStats[];
 
-  // Only count completed flights in 2026
+  // Filter completed flights based on selected year
   const completedFlights = allFlights.filter((f) => {
-    return !f.cancelled && f.status !== 'Cancelled' && getFlightYear(f) === STATS_YEAR;
+    if (f.cancelled || f.status === 'Cancelled') return false;
+    if (yearFilter === "all-time") return true;
+    return getFlightYear(f) === yearFilter;
   });
 
   // Calculate all statistics
@@ -119,31 +126,28 @@ export default function StatsheetPage() {
     }
   });
 
-  // Current year stats
-  const currentYear = STATS_YEAR;
-  const thisYearFlights = completedFlights.filter(f => {
-    const dateStr = (f as any).actual_off || (f as any).scheduled_off || '';
-    return new Date(dateStr).getFullYear() === currentYear;
-  });
-  const thisYearMiles = thisYearFlights.reduce((sum, f) => sum + (f.route_distance || 0), 0);
+  // Selected period stats (for progress section)
+  const selectedPeriodMiles = completedFlights.reduce((sum, f) => sum + (f.route_distance || 0), 0);
 
   // Average flight stats
   const avgDistance = totalFlights > 0 ? totalMiles / totalFlights : 0;
   const avgDuration = totalFlights > 0 ? totalHours / totalFlights : 0;
+
+  const yearLabel = getYearLabel(yearFilter);
 
   const heroStats = [
     {
       title: "Total Flights",
       value: totalFlights.toLocaleString(),
       icon: Plane,
-      description: `${STATS_YEAR} completed flights`,
+      description: `${yearLabel} completed flights`,
       color: "bg-emerald-500",
     },
     {
       title: "Nautical Miles",
       value: totalMiles.toLocaleString(),
       icon: Navigation,
-      description: `Total distance flown in ${STATS_YEAR}`,
+      description: `Total distance flown (${yearLabel})`,
       color: "bg-blue-500",
     },
     {
@@ -157,7 +161,7 @@ export default function StatsheetPage() {
       title: "Flight Hours",
       value: Math.round(totalHours).toLocaleString(),
       icon: Clock,
-      description: `Estimated total time aloft in ${STATS_YEAR}`,
+      description: `Estimated total time aloft (${yearLabel})`,
       color: "bg-amber-500",
     },
   ];
@@ -225,6 +229,23 @@ export default function StatsheetPage() {
               Flight statistics for {ident}
             </p>
           </div>
+        </div>
+
+        {/* Year Toggle */}
+        <div className="flex items-center justify-center gap-2">
+          {([2025, 2026, "all-time"] as YearFilter[]).map((year) => (
+            <button
+              key={year}
+              onClick={() => setYearFilter(year)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                yearFilter === year
+                  ? "bg-robair-green text-white"
+                  : "bg-robair-light text-robair-black/70 hover:bg-robair-light/80"
+              }`}
+            >
+              {year === "all-time" ? "All-Time" : year}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -353,11 +374,11 @@ export default function StatsheetPage() {
               </div>
             )}
             <div className="p-4 bg-robair-light/50 rounded-lg">
-              <div className="text-sm font-medium text-robair-black/70 mb-1">{currentYear} Progress</div>
+              <div className="text-sm font-medium text-robair-black/70 mb-1">{yearLabel} Progress</div>
               <div className="flex items-center justify-between">
-                <span className="font-semibold">{thisYearFlights.length} flights</span>
+                <span className="font-semibold">{completedFlights.length} flights</span>
                 <span className="text-lg font-bold text-purple-600">
-                  {thisYearMiles.toLocaleString()} nm
+                  {selectedPeriodMiles.toLocaleString()} nm
                 </span>
               </div>
             </div>
