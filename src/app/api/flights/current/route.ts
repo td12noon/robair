@@ -25,9 +25,9 @@ export async function GET(request: NextRequest) {
     let fromCache = false;
     let newFlightsStored = 0;
 
-    // Check if we should fetch from API (daily - 24 hours / 1440 minutes)
-    // The cron job handles daily refreshes, so we only fetch if data is stale
-    const needsApiCall = forceRefresh || await shouldFetchFromApi(ident, 1440);
+    // Check if we should fetch from API (weekly - 7 days / 10080 minutes)
+    // The cron job handles daily refreshes, so we use a longer cache to minimize costs
+    const needsApiCall = forceRefresh || await shouldFetchFromApi(ident, 10080);
 
     if (!needsApiCall) {
       // Use stored flights from database

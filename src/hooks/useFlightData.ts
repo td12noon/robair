@@ -56,54 +56,23 @@ export interface CurrentFlights {
   error?: string;
 }
 
-export function useAircraftPosition(ident: string, refreshInterval = 30000) {
-  const [data, setData] = useState<AircraftStatus | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchPosition = useCallback(async () => {
-    if (!ident) return;
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/flights/position?ident=${encodeURIComponent(ident)}`);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-      setData(result);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch position';
-      setError(errorMessage);
-      console.error('Error fetching aircraft position:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [ident]);
-
-  useEffect(() => {
-    fetchPosition();
-
-    if (refreshInterval > 0) {
-      const interval = setInterval(fetchPosition, refreshInterval);
-      return () => clearInterval(interval);
-    }
-  }, [fetchPosition, refreshInterval]);
-
+/**
+ * @deprecated Position tracking disabled to reduce FlightAware API costs.
+ * Returns null data - position tracking is not needed when viewing on the ground.
+ */
+export function useAircraftPosition(ident: string, refreshInterval = 0) {
+  // Position tracking disabled to minimize FlightAware API costs
   return {
-    data,
-    loading,
-    error,
-    refresh: fetchPosition,
+    data: null as AircraftStatus | null,
+    loading: false,
+    error: null as string | null,
+    refresh: () => {},
   };
 }
 
-export function useCurrentFlights(ident: string, refreshInterval = 60000) {
+// Default to no automatic polling to minimize API costs
+// Pass a positive refreshInterval to enable polling if needed
+export function useCurrentFlights(ident: string, refreshInterval = 0) {
   const [data, setData] = useState<CurrentFlights | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -167,13 +136,10 @@ const getAirportCoordinates = (airportCode?: string) => {
 };
 
 export function useFlightData(ident: string) {
-  const position = useAircraftPosition(ident);
   const flights = useCurrentFlights(ident);
 
-  // If no live position, try to get last known location from recent flight
+  // Estimate last known location from most recent flight (no API calls)
   const lastKnownLocation = React.useMemo(() => {
-    if (position.data?.position) return null; // We have live data
-
     const recentFlights = flights.data?.flights || [];
     const mostRecentFlight = recentFlights[0]; // Already sorted by most recent
 
@@ -199,18 +165,19 @@ export function useFlightData(ident: string) {
     }
 
     return null;
-  }, [position.data?.position, flights.data?.flights, ident]);
+  }, [flights.data?.flights, ident]);
 
   return {
     position: {
-      ...position,
-      data: position.data || lastKnownLocation,
+      data: lastKnownLocation,
+      loading: false,
+      error: null,
+      refresh: () => {},
     },
     flights,
-    isLoading: position.loading || flights.loading,
-    hasError: !!position.error || !!flights.error,
+    isLoading: flights.loading,
+    hasError: !!flights.error,
     refresh: () => {
-      position.refresh();
       flights.refresh();
     },
   };

@@ -25,8 +25,9 @@ export async function GET(request: NextRequest) {
     console.log(`[CRON] Daily flight refresh for: ${ident}`);
     console.log(`[CRON] Started at: ${new Date().toISOString()}`);
 
-    // Fetch flights from FlightAware API (with pagination for up to 90 flights)
-    const flights = await flightAware.getCurrentFlights(ident, 90);
+    // Fetch flights from FlightAware API (with pagination for up to 30 flights)
+    // Reduced from 90 to minimize API costs (~$0.30/month vs ~$0.90/month)
+    const flights = await flightAware.getCurrentFlights(ident, 30);
     
     console.log(`[CRON] Fetched ${flights.length} flights from FlightAware`);
 
