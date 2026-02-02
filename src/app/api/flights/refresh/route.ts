@@ -97,8 +97,9 @@ export async function POST(request: NextRequest) {
 
     console.log('Manual flight refresh for:', ident);
 
-    // Fetch flights from FlightAware API
-    const flights = await flightAware.getCurrentFlights(ident, 90);
+    // Fetch flights from FlightAware API (30 flights = ~2 API calls)
+    // Aligned with cron job to minimize costs
+    const flights = await flightAware.getCurrentFlights(ident, 30);
     
     console.log(`Fetched ${flights.length} flights from FlightAware`);
 

@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plane, MapPin, Clock, Navigation, Fuel, Gauge, RefreshCw, ExternalLink, Heart } from "lucide-react";
-import { AircraftMap } from "@/components/aircraft-map";
+import { FlightRouteMap } from "@/components/flight-route-map";
 import { useFlightData } from "@/hooks/useFlightData";
 
 const AIRCRAFT_IDENT = process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N12345";
@@ -154,8 +154,8 @@ export default function TripsPage() {
         </CardContent>
       </Card>
 
-      {/* Aircraft Map */}
-      <AircraftMap ident={AIRCRAFT_IDENT} />
+      {/* Flight Routes Map */}
+      <FlightRouteMap ident={AIRCRAFT_IDENT} />
 
       {/* Flight Information Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

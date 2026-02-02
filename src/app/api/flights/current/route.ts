@@ -39,8 +39,9 @@ export async function GET(request: NextRequest) {
       console.log('Fetching fresh data from FlightAware API...');
       
       try {
-        // Fetch from FlightAware API (with pagination for up to 90 flights)
-        const apiFlights = await flightAware.getCurrentFlights(ident, 90);
+        // Fetch from FlightAware API (with pagination for up to 30 flights)
+        // Reduced from 90 to minimize API costs (~2 API calls vs ~6)
+        const apiFlights = await flightAware.getCurrentFlights(ident, 30);
         
         if (apiFlights.length > 0) {
           // Store the new flights in the database

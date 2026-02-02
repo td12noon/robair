@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { flightAware } from '@/lib/flightaware';
 import { getStoredFlights } from '@/lib/supabase';
 
 interface ChatMessage {
@@ -32,13 +31,9 @@ export async function POST(request: NextRequest) {
     let flightContext = '';
 
     try {
-      // Get stored flights from database
-      let flights = await getStoredFlights(aircraftIdent, 200);
-      
-      // If no stored flights, try API as fallback
-      if (flights.length === 0) {
-        flights = await flightAware.getCurrentFlights(aircraftIdent, 30);
-      }
+      // Get stored flights from database only - never call FlightAware API from chat
+      // to avoid unexpected API costs. Users can manually refresh flight data if needed.
+      const flights = await getStoredFlights(aircraftIdent, 200);
 
       // Calculate basic stats for context
       const currentYear = new Date().getFullYear();

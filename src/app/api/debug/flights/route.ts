@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         flights: flightsSummary,
         responseTimeMs: responseTime,
         timestamp: new Date().toISOString(),
-        hint: 'Add ?skipCache=true to bypass database and hit FlightAware API directly. Add ?testPagination=true to test multi-page fetching.',
+        hint: 'Add ?skipCache=true to bypass database (1 API call). Add ?testPagination=true to test pagination (WARNING: 6 API calls, ~$0.05).',
       });
     }
 
@@ -70,7 +70,9 @@ export async function GET(request: NextRequest) {
     }
 
     // If testing pagination, make multiple requests
+    // WARNING: This makes 6 API calls (~$0.05) - use sparingly!
     if (testPagination) {
+      console.warn('[DEBUG] testPagination triggered - making 6 API calls. Use sparingly to minimize costs.');
       return await testPaginatedFetch(ident, apiKey, keyInfo, databaseInfo, startTime);
     }
 
@@ -172,17 +174,22 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * Test paginated fetch - WARNING: Makes 6 API calls!
+ * Only use for debugging pagination issues. Each call costs money.
+ */
 async function testPaginatedFetch(
-  ident: string, 
-  apiKey: string, 
-  keyInfo: any, 
+  ident: string,
+  apiKey: string,
+  keyInfo: any,
   databaseInfo: any,
   startTime: number
 ) {
   const allFlights: any[] = [];
   const paginationLog: any[] = [];
   let cursor: string | undefined = undefined;
-  const maxRequests = 6; // Up to 90 flights (6 pages * 15 per page)
+  // Reduced from 6 to 2 requests max to minimize API costs during debugging
+  const maxRequests = 2; // Up to 30 flights (2 pages * 15 per page)
   let requestCount = 0;
 
   try {
@@ -251,8 +258,8 @@ async function testPaginatedFetch(
         break;
       }
 
-      // Stop if we have enough flights
-      if (allFlights.length >= 90) {
+      // Stop if we have enough flights (reduced from 90 to minimize API costs)
+      if (allFlights.length >= 30) {
         break;
       }
     }
