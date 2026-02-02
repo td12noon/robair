@@ -154,13 +154,29 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
   const { routes, airports, stats } = useMemo(() => {
     const currentFlights = flights.data?.flights || [];
 
-    // Filter to 2026 flights only
-    const flights2026 = currentFlights.filter(flight => {
+    // Debug: log what we're getting
+    console.log('[FlightRouteMap] Total flights received:', currentFlights.length);
+    if (currentFlights.length > 0) {
+      console.log('[FlightRouteMap] Sample flight:', {
+        origin: currentFlights[0]?.origin,
+        destination: currentFlights[0]?.destination,
+        actual_off: (currentFlights[0] as any)?.actual_off,
+        actual_out: currentFlights[0]?.actual_out,
+      });
+    }
+
+    // Filter to recent flights (last 12 months) to show meaningful data
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const recentFlights = currentFlights.filter(flight => {
       const dateStr = flight.actual_out || flight.scheduled_out || (flight as any).actual_off || (flight as any).scheduled_off;
       if (!dateStr) return false;
-      const year = new Date(dateStr).getFullYear();
-      return year === 2026;
+      const flightDate = new Date(dateStr);
+      return flightDate >= oneYearAgo;
     });
+
+    console.log('[FlightRouteMap] Flights after date filter:', recentFlights.length);
 
     const routeMap = new Map<string, RouteData>();
     const airportMap = new Map<string, { code: string; coords: { latitude: number; longitude: number; name: string; city: string }; flightCount: number }>();
@@ -168,16 +184,36 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    flights2026.forEach(flight => {
+    let skippedNoCode = 0;
+    let skippedNoCoords = 0;
+    let skippedSameAirport = 0;
+    const missingAirports = new Set<string>();
+
+    recentFlights.forEach(flight => {
       const originCode = flight.origin?.code;
       const destCode = flight.destination?.code;
 
-      if (!originCode || !destCode) return;
+      if (!originCode || !destCode) {
+        skippedNoCode++;
+        return;
+      }
+
+      // Skip same airport flights (local flights)
+      if (originCode === destCode) {
+        skippedSameAirport++;
+        return;
+      }
 
       const originCoords = getAirportCoordinates(originCode);
       const destCoords = getAirportCoordinates(destCode);
 
-      if (!originCoords || !destCoords) return;
+      if (!originCoords) missingAirports.add(originCode);
+      if (!destCoords) missingAirports.add(destCode);
+
+      if (!originCoords || !destCoords) {
+        skippedNoCoords++;
+        return;
+      }
 
       const dateStr = flight.actual_out || flight.scheduled_out || (flight as any).actual_off || (flight as any).scheduled_off;
       const flightDate = dateStr ? new Date(dateStr) : new Date();
@@ -219,11 +255,22 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
       }
     });
 
+    // Debug logging
+    console.log('[FlightRouteMap] Processing results:', {
+      totalFlights: recentFlights.length,
+      skippedNoCode,
+      skippedSameAirport,
+      skippedNoCoords,
+      routesFound: routeMap.size,
+      airportsFound: airportMap.size,
+      missingAirports: Array.from(missingAirports),
+    });
+
     return {
       routes: Array.from(routeMap.values()).sort((a, b) => b.flightDate.getTime() - a.flightDate.getTime()),
       airports: Array.from(airportMap.values()),
       stats: {
-        totalFlights: flights2026.length,
+        totalFlights: recentFlights.length,
         uniqueRoutes: routeMap.size,
         airportsVisited: airportMap.size,
         totalMiles: Math.round(totalMiles)
@@ -239,9 +286,9 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
           <CardHeader className="pb-3">
             <div className="flex items-center space-x-2">
               <Route className="h-5 w-5 text-robair-green" />
-              <CardTitle className="text-xl">2026 Flight Routes</CardTitle>
+              <CardTitle className="text-xl">Flight Routes</CardTitle>
             </div>
-            <CardDescription>Loading route map...</CardDescription>
+            <CardDescription>Loading flight history...</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="relative w-full h-96 bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
@@ -267,7 +314,7 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Route className="h-5 w-5 text-robair-green" />
-              <CardTitle className="text-xl">2026 Flight Routes</CardTitle>
+              <CardTitle className="text-xl">Flight Routes</CardTitle>
             </div>
             {isLoading && (
               <div className="flex items-center space-x-2 text-sm text-robair-black/50">
@@ -277,7 +324,7 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
             )}
           </div>
           <CardDescription>
-            All flights for {ident} this year
+            Flight history for {ident} (last 12 months)
           </CardDescription>
         </CardHeader>
 
@@ -415,7 +462,7 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
                 <div className="text-center space-y-2">
                   <Plane className="h-8 w-8 text-robair-black/30 mx-auto" />
                   <div className="text-robair-black/70 text-sm font-medium">
-                    No 2026 flights recorded yet
+                    No recent flights recorded
                   </div>
                   <div className="text-robair-black/50 text-xs">
                     Flight routes will appear here as data is collected
@@ -433,7 +480,7 @@ export function FlightRouteMap({ ident, className }: FlightRouteMapProps) {
                 <span>
                   {stats.airportsVisited > 0
                     ? `${stats.airportsVisited} airports visited across ${stats.uniqueRoutes} unique routes`
-                    : 'Map shows all flight routes for this year'
+                    : 'Map shows flight routes from recent history'
                   }
                 </span>
               </div>
