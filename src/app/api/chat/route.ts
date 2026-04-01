@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       });
 
       const totalMiles = thisYearFlights.reduce((sum, flight) => sum + (flight.route_distance || 0), 0);
-      const angelFlights = thisYearFlights.filter((flight: any) =>
+      const angelFlights = thisYearFlights.filter((flight) =>
         isAngelFlight({ ident: flight.ident, operator: flight.operator })
       );
       const angelFlightMiles = angelFlights.reduce((sum, flight) => sum + (flight.route_distance || 0), 0);
