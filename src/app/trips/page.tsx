@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Plane, MapPin, Clock, Navigation, Fuel, Gauge, RefreshCw, ExternalLink, Heart } from "lucide-react";
 import { FlightRouteMap } from "@/components/flight-route-map";
 import { useFlightData } from "@/hooks/useFlightData";
+import { isAngelFlight } from "@/lib/angel-flight";
 
 const AIRCRAFT_IDENT = process.env.NEXT_PUBLIC_AIRCRAFT_TAIL_NUMBER || "N12345";
 
@@ -37,15 +38,6 @@ function formatDuration(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
   return `${hours}h ${mins}m`;
-}
-
-// Check if flight is Angel Flight based on operator
-function isAngelFlight(operator?: string): boolean {
-  if (!operator) return false;
-  return operator === 'NGF' ||
-         operator.toLowerCase().includes('air charity network') ||
-         operator.toLowerCase().includes('angel flight') ||
-         operator === 'Air Charity Network';
 }
 
 export default function TripsPage() {
@@ -276,11 +268,11 @@ export default function TripsPage() {
                     <div className={`flex h-10 w-10 items-center justify-center rounded-full ${
                       activeFlights.some(f => f.fa_flight_id === flight.fa_flight_id)
                         ? 'bg-green-500'
-                        : isAngelFlight(flight.operator)
+                        : isAngelFlight({ ident: flight.ident, operator: flight.operator })
                         ? 'bg-red-500'
                         : 'bg-gray-400'
                     }`}>
-                      {isAngelFlight(flight.operator) ? (
+                      {isAngelFlight({ ident: flight.ident, operator: flight.operator }) ? (
                         <Heart className="h-5 w-5 text-white" />
                       ) : (
                         <Plane className="h-5 w-5 text-white" />
