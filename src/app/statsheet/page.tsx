@@ -17,6 +17,7 @@ import {
   Zap
 } from "lucide-react";
 import { useFlightData, type FlightInfo } from '@/hooks/useFlightData';
+import { isAngelFlight } from '@/lib/angel-flight';
 
 // Earth's circumference in nautical miles
 const EARTH_CIRCUMFERENCE_NM = 21600;
@@ -82,7 +83,9 @@ export default function StatsheetPage() {
   const timesAroundGlobe = totalMiles / EARTH_CIRCUMFERENCE_NM;
 
   // Angel Flight stats
-  const angelFlights = completedFlights.filter(f => f.operator === 'NGF');
+  const angelFlights = completedFlights.filter((f) =>
+    isAngelFlight({ ident: f.ident, operator: f.operator })
+  );
   const angelFlightMiles = angelFlights.reduce((sum, f) => sum + (f.route_distance || 0), 0);
   const angelFlightHours = angelFlights.reduce((sum, f) => sum + getFlightHours(f), 0);
 

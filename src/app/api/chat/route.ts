@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStoredFlights } from '@/lib/supabase';
+import { isAngelFlight } from '@/lib/angel-flight';
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
@@ -43,14 +44,16 @@ export async function POST(request: NextRequest) {
       });
 
       const totalMiles = thisYearFlights.reduce((sum, flight) => sum + (flight.route_distance || 0), 0);
-      const angelFlights = thisYearFlights.filter(flight => flight.operator === 'NGF');
+      const angelFlights = thisYearFlights.filter((flight: any) =>
+        isAngelFlight({ ident: flight.ident, operator: flight.operator })
+      );
       const angelFlightMiles = angelFlights.reduce((sum, flight) => sum + (flight.route_distance || 0), 0);
 
       flightContext = `
 Current aircraft data for ${aircraftIdent}:
 - Total flights in ${currentYear}: ${thisYearFlights.length}
 - Total miles flown in ${currentYear}: ${totalMiles} nautical miles
-- Angel Flights (NGF operator): ${angelFlights.length} flights, ${angelFlightMiles} nautical miles
+- Angel Flights (NGF callsign/operator): ${angelFlights.length} flights, ${angelFlightMiles} nautical miles
 - Aircraft type: ${flights[0]?.aircraft_type || 'SR22'}
 - Recent flight status: ${flights[0]?.status || 'Unknown'}
 `;

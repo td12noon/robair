@@ -46,7 +46,9 @@ export async function storeFlights(flights: any[]): Promise<{ stored: number; er
     const batch = flights.slice(i, i + batchSize);
     
     const flightRows = batch.map(flight => ({
-      ident: flight.ident || flight.registration,
+      // Store under tail number when available so callsign-based flights
+      // (e.g. NGF1066) still roll up with the aircraft history.
+      ident: (flight.registration || flight.ident || '').toUpperCase(),
       fa_flight_id: flight.fa_flight_id,
       operator: flight.operator || null,
       origin_code: flight.origin?.code || null,
@@ -86,19 +88,56 @@ export async function getStoredFlights(ident: string, limit: number = 200): Prom
   }
 
   try {
-    const { data, error } = await supabase
-      .from('flights')
-      .select('flight_data')
-      .eq('ident', ident)
-      .order('flight_date', { ascending: false })
-      .limit(limit);
+    const normalizedIdent = ident.trim().toUpperCase();
 
-    if (error) {
-      console.error('Error fetching stored flights:', error);
+    const [byIdentResult, byRegistrationResult] = await Promise.all([
+      supabase
+        .from('flights')
+        .select('flight_data')
+        .eq('ident', normalizedIdent)
+        .order('flight_date', { ascending: false })
+        .limit(limit),
+      supabase
+        .from('flights')
+        .select('flight_data')
+        .filter('flight_data->>registration', 'eq', normalizedIdent)
+        .order('flight_date', { ascending: false })
+        .limit(limit),
+    ]);
+
+    if (byIdentResult.error) {
+      console.error('Error fetching stored flights by ident:', byIdentResult.error);
       return [];
     }
 
-    return (data || []).map(row => row.flight_data);
+    if (byRegistrationResult.error) {
+      console.error('Error fetching stored flights by registration:', byRegistrationResult.error);
+      return [];
+    }
+
+    const combined = [
+      ...(byIdentResult.data || []),
+      ...(byRegistrationResult.data || []),
+    ].map(row => row.flight_data);
+
+    const deduped = new Map<string, any>();
+    for (const flight of combined) {
+      if (!flight) continue;
+      const key =
+        flight.fa_flight_id ||
+        `${flight.ident || 'unknown'}-${flight.actual_off || flight.scheduled_off || flight.actual_out || flight.scheduled_out || ''}`;
+      if (!deduped.has(key)) {
+        deduped.set(key, flight);
+      }
+    }
+
+    const sorted = Array.from(deduped.values()).sort((a, b) => {
+      const aDate = new Date(a.actual_off || a.scheduled_off || a.actual_out || a.scheduled_out || 0).getTime();
+      const bDate = new Date(b.actual_off || b.scheduled_off || b.actual_out || b.scheduled_out || 0).getTime();
+      return bDate - aDate;
+    });
+
+    return sorted.slice(0, limit);
   } catch (error) {
     console.error('Error in getStoredFlights:', error);
     return [];
@@ -114,17 +153,38 @@ export async function getStoredFlightCount(ident: string): Promise<number> {
   }
 
   try {
-    const { count, error } = await supabase
-      .from('flights')
-      .select('*', { count: 'exact', head: true })
-      .eq('ident', ident);
+    const normalizedIdent = ident.trim().toUpperCase();
 
-    if (error) {
-      console.error('Error counting stored flights:', error);
+    const [byIdentResult, byRegistrationResult] = await Promise.all([
+      supabase
+        .from('flights')
+        .select('fa_flight_id')
+        .eq('ident', normalizedIdent),
+      supabase
+        .from('flights')
+        .select('fa_flight_id')
+        .filter('flight_data->>registration', 'eq', normalizedIdent),
+    ]);
+
+    if (byIdentResult.error) {
+      console.error('Error counting stored flights by ident:', byIdentResult.error);
       return 0;
     }
 
-    return count || 0;
+    if (byRegistrationResult.error) {
+      console.error('Error counting stored flights by registration:', byRegistrationResult.error);
+      return 0;
+    }
+
+    const uniqueIds = new Set<string>();
+    for (const row of byIdentResult.data || []) {
+      if (row.fa_flight_id) uniqueIds.add(row.fa_flight_id);
+    }
+    for (const row of byRegistrationResult.data || []) {
+      if (row.fa_flight_id) uniqueIds.add(row.fa_flight_id);
+    }
+
+    return uniqueIds.size;
   } catch (error) {
     console.error('Error in getStoredFlightCount:', error);
     return 0;
@@ -140,12 +200,13 @@ export async function shouldFetchFromApi(ident: string, maxAgeMinutes: number = 
   }
 
   try {
+    const normalizedIdent = ident.trim().toUpperCase();
     const cutoffTime = new Date(Date.now() - maxAgeMinutes * 60 * 1000).toISOString();
 
     const { data, error } = await supabase
       .from('api_fetch_log')
       .select('last_fetched')
-      .eq('ident', ident)
+      .eq('ident', normalizedIdent)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -174,10 +235,11 @@ export async function updateApiFetchLog(ident: string, flightsFetched: number): 
   }
 
   try {
+    const normalizedIdent = ident.trim().toUpperCase();
     const { error } = await supabase
       .from('api_fetch_log')
       .upsert({
-        ident,
+        ident: normalizedIdent,
         last_fetched: new Date().toISOString(),
         flights_fetched: flightsFetched,
       }, {
@@ -201,19 +263,41 @@ export async function getRecentFlightIds(ident: string, limit: number = 100): Pr
   }
 
   try {
-    const { data, error } = await supabase
-      .from('flights')
-      .select('fa_flight_id')
-      .eq('ident', ident)
-      .order('flight_date', { ascending: false })
-      .limit(limit);
+    const normalizedIdent = ident.trim().toUpperCase();
+    const [byIdentResult, byRegistrationResult] = await Promise.all([
+      supabase
+        .from('flights')
+        .select('fa_flight_id')
+        .eq('ident', normalizedIdent)
+        .order('flight_date', { ascending: false })
+        .limit(limit),
+      supabase
+        .from('flights')
+        .select('fa_flight_id')
+        .filter('flight_data->>registration', 'eq', normalizedIdent)
+        .order('flight_date', { ascending: false })
+        .limit(limit),
+    ]);
 
-    if (error) {
-      console.error('Error fetching recent flight IDs:', error);
+    if (byIdentResult.error) {
+      console.error('Error fetching recent flight IDs by ident:', byIdentResult.error);
       return new Set();
     }
 
-    return new Set((data || []).map(row => row.fa_flight_id));
+    if (byRegistrationResult.error) {
+      console.error('Error fetching recent flight IDs by registration:', byRegistrationResult.error);
+      return new Set();
+    }
+
+    const ids = new Set<string>();
+    for (const row of byIdentResult.data || []) {
+      if (row.fa_flight_id) ids.add(row.fa_flight_id);
+    }
+    for (const row of byRegistrationResult.data || []) {
+      if (row.fa_flight_id) ids.add(row.fa_flight_id);
+    }
+
+    return ids;
   } catch (error) {
     console.error('Error in getRecentFlightIds:', error);
     return new Set();

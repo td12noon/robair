@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plane, MapPin, Heart, TrendingUp } from "lucide-react";
 import { useFlightData, type FlightInfo } from '@/hooks/useFlightData';
+import { isAngelFlight } from '@/lib/angel-flight';
 
 interface FlightAnalyticsProps {
   ident: string;
@@ -18,17 +19,6 @@ const getFlightDistance = (flight: FlightInfo): number => {
 
   // Return 0 if no distance data available
   return 0;
-};
-
-// Determine if a flight is an Angel Flight based on operator
-const isAngelFlight = (operator?: string): boolean => {
-  if (!operator) return false;
-
-  // Check if the operator is "NGF" (New Generation Flight) or other Angel Flight identifiers
-  return operator === 'NGF' ||
-         operator.toLowerCase().includes('air charity network') ||
-         operator.toLowerCase().includes('angel flight') ||
-         operator === 'Air Charity Network';
 };
 
 const isCompletedFlight = (flight: FlightInfo): boolean => {
@@ -84,7 +74,7 @@ export function FlightAnalytics({ ident }: FlightAnalyticsProps) {
     const distance = getFlightDistance(flight);
     totalMiles += distance;
 
-    const angelFlight = isAngelFlight(flight.operator);
+    const angelFlight = isAngelFlight({ ident: flight.ident, operator: flight.operator });
 
     if (angelFlight) {
       angelFlightMiles += distance;
